@@ -1,6 +1,6 @@
 # UniRoom-Live 2.0 🏫🚀
 
-[![Architecture: Clean](https://img.shields.io/badge/Architecture-Clean%20Architecture-00D26A?style=for-the-badge)](complete_project.md)
+[![Architecture: Clean](https://img.shields.io/badge/Architecture-Clean%20Architecture-00D26A?style=for-the-badge)](docs/complete_project.md)
 [![Backend: TypeScript/NestJS](https://img.shields.io/badge/Backend-NestJS%20%2B%20TypeScript-E0234E?style=for-the-badge&logo=nestjs)](backend)
 [![Database: PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791?style=for-the-badge&logo=postgresql)](backend)
 [![Cache: Redis](https://img.shields.io/badge/Cache-Redis%207-DC382D?style=for-the-badge&logo=redis)](backend)
@@ -12,9 +12,18 @@
 
 ---
 
-## 📖 Master Engineering Blueprint
+## 📚 Master Documentation Hub (`docs/`)
 
-For the exhaustive architectural specification, 5-year job security skill matrix, entity-relationship diagrams, and design trade-offs, read the **[Master Blueprint (complete_project.md)](complete_project.md)**.
+| Document | Purpose & Description | Link |
+| :--- | :--- | :---: |
+| **System Analysis** | Requirements, 4-Role RBAC, Edge Cases & $0 Strategy | [system_analysis.md](docs/system_analysis.md) |
+| **System Design** | C4 Diagrams, Scale Math, Indexing & Top 10 Q&A | [system_design.md](docs/system_design.md) |
+| **Distributed Systems Handbook** | Advanced Sharding, Kafka vs RabbitMQ, Raft & Free Courses | [future_system_design_handbook.md](docs/future_system_design_handbook.md) |
+| **Project Master Blueprint** | Original System Charter, C4 Models & 5-Year Skill Mapping | [complete_project.md](docs/complete_project.md) |
+| **Architecture Rationale** | Technical Decisions & Trade-Offs (English & বাংলা) | [architecture_rationale.md](project%20docs/architecture_rationale.md) |
+| **Bengali Learning Guide** | টেকনোলজি বাছাইয়ের পেছনের গভীর কারণ (বাংলা গাইড) | [guide.md](docs/guide.md) |
+| **Milestone 1 Guide** | Backend Core, Docker Infrastructure & Prisma Schema | [milestone_one.md](project%20docs/milestone_one.md) |
+| **Execution Tasks Tracker** | Step-by-step implementation progress tracker (Task 1 to End) | [tasks.md](tasks.md) |
 
 ---
 
