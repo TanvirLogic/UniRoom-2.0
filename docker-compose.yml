@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # 1. PostgreSQL 16 - Multi-Tenant Relational Database
+  # ============================================================================
+  uniroom-db:
+    image: postgres:16-alpine
+    container_name: uniroom-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-uniroom_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-uniroom_secret_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-uniroom_live}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-uniroom_admin} -d ${POSTGRES_DB:-uniroom_live}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uniroom-network
+
+  # ============================================================================
+  # 2. Redis 7 - In-Memory State Cache, Rate Limiting & Pub/Sub
+  # ============================================================================
+  uniroom-redis:
+    image: redis:7-alpine
+    container_name: uniroom-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uniroom-network
+
+  # ============================================================================
+  # 3. Backend API Service (NestJS + TypeScript)
+  # ============================================================================
+  uniroom-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: uniroom-api
+    restart: unless-stopped
+    depends_on:
+      uniroom-db:
+        condition: service_healthy
+      uniroom-redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-uniroom_admin}:${POSTGRES_PASSWORD:-uniroom_secret_pass}@uniroom-db:5432/${POSTGRES_DB:-uniroom_live}?schema=public
+      REDIS_HOST: uniroom-redis
+      REDIS_PORT: 6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-super_secret_jwt_access_key_change_in_prod}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-super_secret_jwt_refresh_key_change_in_prod}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - uniroom-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  uniroom-network:
+    driver: bridge

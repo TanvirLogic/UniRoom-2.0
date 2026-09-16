@@ -1,0 +1,53 @@
+# ==============================================================================
+# UniRoom-Live 2.0 - Root .gitignore
+# Purpose: Prevent sensitive keys, dependencies, and OS clutter from entering Git.
+# ==============================================================================
+
+# Environment & Secrets (CRITICAL: Never commit credentials to version control)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+google-services.json
+GoogleService-Info.plist
+
+# Node.js & Backend (Dependencies & Build Outputs)
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/.nyc_output/
+backend/*.log
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+
+# Flutter & Dart (Build artifacts, cache & tools)
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/android/local.properties
+mobile/android/.gradle
+mobile/coverage/
+
+# Database & Local Storage
+postgres_data/
+redis_data/
+*.sqlite
+*.db
+
+# Operating System & IDE Clutter
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+*.swp
+*~
