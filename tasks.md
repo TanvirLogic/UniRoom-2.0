@@ -14,7 +14,7 @@
 | Milestone | Focus Area | Tasks | Status |
 | :--- | :--- | :---: | :---: |
 | **Milestone 0** | Architecture Blueprint, System Analysis & Handbooks | Task 0.1 - 0.4 | `[x]` Completed |
-| **Milestone 1** | Backend Core, Docker Infrastructure & Prisma Multi-Tenant Schema | Task 1.1 - 1.5 | `[ ]` Ready |
+| **Milestone 1** | Backend Core, Cloud DB & Prisma Multi-Tenant Schema | Task 1.1 - 1.5 | `[x]` Completed |
 | **Milestone 2** | Multi-Tenant Auth, Cryptographic JWT Rotation & RBAC Guards | Task 2.1 - 2.5 | `[ ]` Queued |
 | **Milestone 3** | Universities, Departments, Campuses & Rooms Module | Task 3.1 - 3.4 | `[ ]` Queued |
 | **Milestone 4** | Super Admin Dual-Mode Routine Ingestion (AI + JSON) | Task 4.1 - 4.5 | `[ ]` Queued |
@@ -47,39 +47,43 @@
 
 ---
 
-## 🚀 Milestone 1: Backend Core, Docker & Prisma Multi-Tenant Schema
+## 🚀 Milestone 1: Backend Core, Cloud DB & Prisma Multi-Tenant Schema (`[x]` COMPLETED)
 
-> 📘 **Detailed Milestone 1 Guide**: [`project docs/milestone_one.md`](project%20docs/milestone_one.md) (Prerequisites, dependencies, and task breakdown)
+> 📘 **Detailed Milestone 1 Guide**: [`project docs/milestone_one.md`](project%20docs/milestone_one.md) (Prerequisites, dependencies, and task breakdown)  
+> 📘 **Detailed Architecture Learning Guides**:  
+> - Bengali: [`project explanation/milestone_one_learning_bangla.md`](project%20explanation/milestone_one_learning_bangla.md)  
+> - English: [`project explanation/milestone_one_learning_english.md`](project%20explanation/milestone_one_learning_english.md)  
+> - Lifecycle: [`project explanation/src_execution_lifecycle.md`](project%20explanation/src_execution_lifecycle.md)
 
-- [ ] **Task 1.1: Backend Project Initialization & Monorepo Structure**
+- [x] **Task 1.1: Backend Project Initialization & Monorepo Structure**
   - **Objective**: Initialize `backend/` using TypeScript and NestJS with strict ESLint and Prettier configs.
   - **SWE Principle**: Modular Monolith foundation, TypeScript strict mode (zero `any`).
   - **Files**: `backend/package.json`, `backend/tsconfig.json`, `backend/nest-cli.json`, `backend/src/main.ts`.
   - **Verification**: Run `npm run build` with 0 compilation errors.
 
-- [ ] **Task 1.2: Multi-Tenant Prisma Schema Design**
+- [x] **Task 1.2: Multi-Tenant Prisma Schema Design**
   - **Objective**: Define relational schema: `University`, `Department`, `Building`, `Room`, `User`, `ScheduleSlot`, `ScheduleOverride`, `RoomLog`.
   - **SWE Principle**: Relational data integrity, Foreign key constraints, Composite unique constraints (preventing duplicate room names in the same building).
   - **Files**: `backend/prisma/schema.prisma`.
   - **Verification**: `npx prisma validate` runs clean.
 
-- [ ] **Task 1.3: Docker Infrastructure Boot & Healthchecks**
-  - **Objective**: Configure and boot PostgreSQL 16 and Redis 7 containers locally.
-  - **SWE Principle**: Containerized Infrastructure as Code (IaC), deterministic environments.
-  - **Files**: `docker-compose.yml`, `backend/.env`.
-  - **Verification**: `docker compose up -d` runs with healthy statuses for PostgreSQL (port 5432) and Redis (port 6379).
+- [x] **Task 1.3: Database Infrastructure (Neon Serverless PostgreSQL Cloud)**
+  - **Objective**: Configure serverless PostgreSQL on AWS cloud with TLS/SSL encryption and connection pooling (`pooler`).
+  - **SWE Principle**: Zero-cost, high-availability serverless relational storage with PgBouncer pooling.
+  - **Files**: `backend/.env`, `backend/.env.example`.
+  - **Verification**: TLS encrypted connection established to Neon AWS us-east-2.
 
-- [ ] **Task 1.4: Initial Database Migration & Seeding**
-  - **Objective**: Execute the first automated migration and create seed scripts for sample Universities (e.g. Uttara University) and Departments (CSE).
+- [x] **Task 1.4: Initial Database Migration & Seeding**
+  - **Objective**: Execute the first automated migration (`init_multitenant_schema`) and create seed scripts for sample Universities (Uttara University) and Departments (CSE).
   - **SWE Principle**: Automated Database Versioning, Repeatable Seeding.
   - **Files**: `backend/prisma/migrations/`, `backend/prisma/seed.ts`.
-  - **Verification**: Database inspected via Prisma Studio (`npx prisma studio`).
+  - **Verification**: Applied migration `20260916044320_init_multitenant_schema` and seeded 4 rooms, 4 core user roles, and 3 master schedule slots.
 
-- [ ] **Task 1.5: Core Cross-Cutting Infrastructure (Global Filters & Pipes)**
-  - **Objective**: Setup Global ValidationPipe (`class-validator`), Global HTTP Exception Filter, and Logging Interceptor.
+- [x] **Task 1.5: Core Cross-Cutting Infrastructure (Global Filters & Pipes & Swagger)**
+  - **Objective**: Setup Global ValidationPipe (`class-validator`), Global HTTP Exception Filter, Transform Interceptor, and Swagger OpenAPI at `/api/docs`.
   - **SWE Principle**: Centralized Error Handling, uniform API response envelopes (`{ success: true, data: ..., timestamp: ... }`).
-  - **Files**: `backend/src/common/filters/`, `backend/src/common/interceptors/`.
-  - **Verification**: Passing bad payloads returns structured HTTP 400 with field-specific errors.
+  - **Files**: `backend/src/common/filters/`, `backend/src/common/interceptors/`, `backend/src/health/`, `backend/src/main.ts`.
+  - **Verification**: `GET /api/v1/health` and Swagger UI at `/api/docs`.
 
 ---
 
