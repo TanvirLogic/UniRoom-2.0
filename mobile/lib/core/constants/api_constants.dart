@@ -8,7 +8,7 @@ class ApiConstants {
   static const String _envApiUrl = String.fromEnvironment('API_URL');
 
   /// Set your hosted cloud backend URL here when deployed (e.g. Render / Koyeb)
-  static const String? cloudBaseUrl = 'https://uniroom-2-0.onrender.com/api/v1';
+  static const String cloudBaseUrl = 'https://uniroom-2-0.onrender.com/api/v1';
 
   // Platform-specific base URL resolution:
   // - Hosted Cloud URL: if cloudBaseUrl or --dart-define=API_URL is set

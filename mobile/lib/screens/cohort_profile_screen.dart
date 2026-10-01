@@ -277,6 +277,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
               Navigator.pop(dialogCtx);
               await NotificationService().unsubscribeAll();
               if (!context.mounted) return;
+              context.read<ScheduleProvider>().clearSchedules();
               await context.read<AuthProvider>().logout();
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(

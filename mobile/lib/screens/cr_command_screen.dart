@@ -510,11 +510,14 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
                     }
 
                     Navigator.pop(sheetCtx);
+                    final isSameRoom = roomCtrl.text.trim().isEmpty ||
+                        roomCtrl.text.trim() == slot.effectiveRoomNumber ||
+                        roomCtrl.text.trim() == slot.roomNumber;
                     final success = await context.read<ScheduleProvider>().rescheduleTodayClass(
                           slotId: slot.id,
                           newStartTime: startStr,
                           newEndTime: endStr,
-                          newRoomId: roomCtrl.text.trim().isNotEmpty ? roomCtrl.text.trim() : null,
+                          newRoomId: isSameRoom ? null : roomCtrl.text.trim(),
                           reason: reasonCtrl.text.trim(),
                         );
 

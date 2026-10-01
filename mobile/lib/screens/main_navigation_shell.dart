@@ -34,7 +34,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       if (user != null) {
         context.read<ScheduleProvider>().syncWithUser(user);
         NotificationService().syncUserCohortTopics(
-          department: user.departmentName ?? user.departmentId,
+          department: user.departmentCode ?? user.departmentName ?? user.departmentId,
           batch: user.batch ?? '',
           section: user.section ?? '',
           isCr: user.isCr,

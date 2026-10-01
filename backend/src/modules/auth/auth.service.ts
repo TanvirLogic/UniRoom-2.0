@@ -249,6 +249,12 @@ export class AuthService {
         isApprovedCr: true,
         isEmailVerified: true,
         createdAt: true,
+        university: {
+          select: { id: true, name: true, code: true },
+        },
+        department: {
+          select: { id: true, name: true, code: true },
+        },
       },
     });
 
@@ -324,6 +330,14 @@ export class AuthService {
       where: {
         email: { equals: email, mode: 'insensitive' },
       },
+      include: {
+        university: {
+          select: { id: true, name: true, code: true },
+        },
+        department: {
+          select: { id: true, name: true, code: true },
+        },
+      },
     });
 
     if (!user) {
@@ -392,6 +406,12 @@ export class AuthService {
           isApprovedCr: true,
           isEmailVerified: true,
           createdAt: true,
+          university: {
+            select: { id: true, name: true, code: true },
+          },
+          department: {
+            select: { id: true, name: true, code: true },
+          },
         },
       });
 

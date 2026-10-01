@@ -103,9 +103,23 @@ class ScheduleProvider extends ChangeNotifier {
     return slots;
   }
 
+  /// Clear loaded schedules (e.g. on logout or user switch)
+  void clearSchedules() {
+    _allWeeklySlots = [];
+    _currentDept = null;
+    _currentBatch = null;
+    _currentSection = null;
+    _currentFacultyCode = null;
+    _userRole = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   /// Load or synchronize schedules matching the authenticated user profile
   Future<void> syncWithUser(UserModel user, {bool force = false}) async {
-    final deptCode = user.departmentName ?? 'CSE';
+    final deptCode = (user.departmentCode?.isNotEmpty == true)
+        ? user.departmentCode!
+        : (user.departmentId.isNotEmpty ? user.departmentId : (user.departmentName ?? 'SWE'));
     final batch = user.batch;
     final section = user.section;
     final facultyId = user.facultyId;

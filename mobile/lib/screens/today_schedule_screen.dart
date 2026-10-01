@@ -1267,11 +1267,14 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     ),
                     onPressed: () async {
                       Navigator.pop(sheetCtx);
+                      final isSameRoom = roomCtrl.text.trim().isEmpty ||
+                          roomCtrl.text.trim() == slot.effectiveRoomNumber ||
+                          roomCtrl.text.trim() == slot.roomNumber;
                       final success = await context.read<ScheduleProvider>().rescheduleTodayClass(
                             slotId: slot.id,
                             newStartTime: formatTimeOfDay(selectedStart),
                             newEndTime: formatTimeOfDay(selectedEnd),
-                            newRoomId: roomCtrl.text.trim().isEmpty ? null : roomCtrl.text.trim(),
+                            newRoomId: isSameRoom ? null : roomCtrl.text.trim(),
                             reason: reasonCtrl.text.trim().isEmpty
                                 ? 'Morning class was delayed; shifting to afternoon'
                                 : reasonCtrl.text.trim(),
@@ -1283,7 +1286,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                           content: Text(
                             success
                                 ? 'Class rescheduled for today and section notified!'
-                                : 'Failed to reschedule class.',
+                                : 'Failed to reschedule: ${context.read<ScheduleProvider>().errorMessage ?? "Unknown error"}',
                           ),
                           backgroundColor: success ? AppColors.success : AppColors.error,
                         ),

@@ -541,12 +541,14 @@ export class SchedulesService {
           OR: [
             { id: query.department },
             { code: { equals: query.department, mode: 'insensitive' } },
+            { name: { contains: query.department, mode: 'insensitive' } },
           ],
           ...(query.university && {
             university: {
               OR: [
                 { id: query.university },
                 { code: { equals: query.university, mode: 'insensitive' } },
+                { name: { contains: query.university, mode: 'insensitive' } },
               ],
             },
           }),
@@ -557,7 +559,10 @@ export class SchedulesService {
         where.departmentId = dept.id;
       } else {
         where.department = {
-          code: { equals: query.department, mode: 'insensitive' },
+          OR: [
+            { code: { equals: query.department, mode: 'insensitive' } },
+            { name: { contains: query.department, mode: 'insensitive' } },
+          ],
         };
       }
     } else if (query?.university) {
@@ -651,6 +656,17 @@ export class SchedulesService {
     const overrideDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // 0. Remove prior override for today if any (prevents duplicate overrides on same slot today)
+      await tx.scheduleOverride.deleteMany({
+        where: {
+          scheduleSlotId: slot.id,
+          overrideDate: {
+            gte: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0),
+            lt: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1, 0, 0, 0),
+          },
+        },
+      });
+
       // 1. Create ScheduleOverride
       const override = await tx.scheduleOverride.create({
         data: {
@@ -786,6 +802,17 @@ export class SchedulesService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // 0. Remove prior override for today if any (prevents duplicate overrides on same slot today)
+      await tx.scheduleOverride.deleteMany({
+        where: {
+          scheduleSlotId: slot.id,
+          overrideDate: {
+            gte: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0),
+            lt: new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1, 0, 0, 0),
+          },
+        },
+      });
+
       // 1. Create ScheduleOverride
       const override = await tx.scheduleOverride.create({
         data: {

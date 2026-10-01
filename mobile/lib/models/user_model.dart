@@ -14,7 +14,9 @@ class UserModel {
   final bool isApprovedCr;
   final bool isEmailVerified;
   final String? universityName;
+  final String? universityCode;
   final String? departmentName;
+  final String? departmentCode;
 
   UserModel({
     required this.id,
@@ -30,19 +32,25 @@ class UserModel {
     this.isApprovedCr = false,
     this.isEmailVerified = false,
     this.universityName,
+    this.universityCode,
     this.departmentName,
+    this.departmentCode,
   });
 
   /// Factory constructor to build a UserModel instance from a JSON map
   factory UserModel.fromJson(Map<String, dynamic> json) {
     String? uniName;
+    String? uniCode;
     if (json['university'] is Map<String, dynamic>) {
       uniName = json['university']['name'];
+      uniCode = json['university']['code'];
     }
 
     String? deptName;
+    String? deptCode;
     if (json['department'] is Map<String, dynamic>) {
       deptName = json['department']['name'];
+      deptCode = json['department']['code'];
     }
 
     return UserModel(
@@ -58,8 +66,10 @@ class UserModel {
       facultyId: json['facultyId'],
       isApprovedCr: json['isApprovedCr'] ?? false,
       isEmailVerified: json['isEmailVerified'] ?? false,
-      universityName: uniName,
-      departmentName: deptName,
+      universityName: uniName ?? json['universityName'],
+      universityCode: uniCode ?? json['universityCode'],
+      departmentName: deptName ?? json['departmentName'],
+      departmentCode: deptCode ?? json['departmentCode'],
     );
   }
 
@@ -79,7 +89,9 @@ class UserModel {
       'isApprovedCr': isApprovedCr,
       'isEmailVerified': isEmailVerified,
       'universityName': universityName,
+      'universityCode': universityCode,
       'departmentName': departmentName,
+      'departmentCode': departmentCode,
     };
   }
 
