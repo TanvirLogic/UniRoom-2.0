@@ -1,16 +1,20 @@
-import { PrismaClient, Role, RoomStatus, DayOfWeek } from '@prisma/client';
+import { DayOfWeek, PrismaClient, Role, RoomStatus } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting UniRoom-Live 2.0 Database Seeding...');
+  console.log('🌱 Starting Comprehensive Test & Demo Data Seeding for UniRoom-Live...');
 
-  // 1. Clean existing data in reverse order of foreign key dependencies
+  // 1. Clean existing records in reverse order of foreign key dependencies
+  await prisma.emailVerificationPin.deleteMany();
+  await prisma.passwordResetPin.deleteMany();
   await prisma.emergencyAnnouncement.deleteMany();
   await prisma.scheduleOverride.deleteMany();
   await prisma.scheduleSlot.deleteMany();
   await prisma.roomLog.deleteMany();
   await prisma.room.deleteMany();
+  await prisma.academicBatch.deleteMany();
   await prisma.building.deleteMany();
   await prisma.user.deleteMany();
   await prisma.department.deleteMany();
@@ -18,178 +22,378 @@ async function main() {
 
   console.log('🧹 Cleaned existing database tables.');
 
+  const defaultPassword = 'Password123!';
+  const passwordHash = await bcrypt.hash(defaultPassword, 10);
+
   // 2. Create University
   const university = await prisma.university.create({
     data: {
       name: 'Uttara University',
       code: 'UU',
       domain: 'uttara.edu.bd',
-      operatingDays: [DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU],
+      operatingDays: [
+        DayOfWeek.MON,
+        DayOfWeek.TUE,
+        DayOfWeek.WED,
+        DayOfWeek.THU,
+        DayOfWeek.FRI,
+        DayOfWeek.SAT,
+        DayOfWeek.SUN,
+      ],
       isActive: true,
     },
   });
-  console.log(`✅ Seeded University: ${university.name} (${university.code})`);
+  console.log(`🏛️ Created University: ${university.name} (${university.code})`);
 
-  // 3. Create Department
-  const department = await prisma.department.create({
+  // 3. Create Departments
+  const sweDept = await prisma.department.create({
     data: {
       universityId: university.id,
-      name: 'Computer Science & Engineering',
+      name: 'Department of Software Engineering',
+      code: 'SWE',
+    },
+  });
+
+  const cseDept = await prisma.department.create({
+    data: {
+      universityId: university.id,
+      name: 'Department of Computer Science & Engineering',
       code: 'CSE',
     },
   });
-  console.log(`✅ Seeded Department: ${department.name} (${department.code})`);
+  console.log(`🏢 Created Departments: ${sweDept.code}, ${cseDept.code}`);
 
-  // 4. Create Building
-  const building = await prisma.building.create({
-    data: {
-      departmentId: department.id,
-      campusName: 'Permanent Campus',
-      name: 'Building B',
-    },
-  });
-  console.log(`✅ Seeded Building: ${building.name} (${building.campusName})`);
-
-  // 5. Create Core Physical Rooms
-  const roomsData = [
-    { roomNumber: 'AI Lab 5210 (514)', floor: 5, capacity: 45, currentStatus: RoomStatus.AVAILABLE },
-    { roomNumber: '5030 (508)', floor: 5, capacity: 55, currentStatus: RoomStatus.AVAILABLE },
-    { roomNumber: 'Phy Lab 6080 (601)', floor: 6, capacity: 40, currentStatus: RoomStatus.AVAILABLE },
-    { roomNumber: '6050 (605)', floor: 6, capacity: 50, currentStatus: RoomStatus.AVAILABLE },
-  ];
-
-  const createdRooms: Record<string, string> = {};
-  for (const r of roomsData) {
-    const room = await prisma.room.create({
-      data: {
-        universityId: university.id,
-        departmentId: department.id,
-        buildingId: building.id,
-        roomNumber: r.roomNumber,
-        floor: r.floor,
-        capacity: r.capacity,
-        currentStatus: r.currentStatus,
+  // 4. Create Academic Batches & Sections
+  await prisma.academicBatch.createMany({
+    data: [
+      {
+        departmentId: sweDept.id,
+        name: '68',
+        sections: ['A', 'B', 'C'],
+        isActive: true,
       },
-    });
-    createdRooms[r.roomNumber] = room.id;
-  }
-  console.log(`✅ Seeded ${Object.keys(createdRooms).length} Physical Rooms`);
+      {
+        departmentId: sweDept.id,
+        name: '69',
+        sections: ['A', 'B'],
+        isActive: true,
+      },
+      {
+        departmentId: cseDept.id,
+        name: '60',
+        sections: ['A', 'B'],
+        isActive: true,
+      },
+    ],
+  });
+  console.log('📚 Created Batches 68, 69 for SWE and 60 for CSE.');
 
-  // 6. Create Seed Users (4 Core Roles)
-  // Note: Passwords stored as deterministic dummy hashes for development
-  const dummyHash = '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW'; // "Password123!"
-
-  const superAdmin = await prisma.user.create({
+  // 5. Create Campus Buildings
+  const mainBuilding = await prisma.building.create({
     data: {
-      universityId: university.id,
-      departmentId: department.id,
-      fullName: 'Chief University Admin',
-      email: 'admin@uttara.edu.bd',
-      passwordHash: dummyHash,
-      role: Role.SUPER_ADMIN,
+      departmentId: sweDept.id,
+      name: 'Main Academic Building',
+      campusName: 'Main Campus',
     },
   });
 
-  const facultyUser = await prisma.user.create({
+  const labBuilding = await prisma.building.create({
+    data: {
+      departmentId: sweDept.id,
+      name: 'Engineering Complex',
+      campusName: 'Main Campus',
+    },
+  });
+  console.log(`🏗️ Created Buildings: ${mainBuilding.name}, ${labBuilding.name}`);
+
+  // 6. Create Physical Classrooms
+  // Room 5030 is currently in RUNNING_CLASS so Section A CR can test "Make Room Free"
+  const room5030 = await prisma.room.create({
     data: {
       universityId: university.id,
-      departmentId: department.id,
-      fullName: 'Dr. Dewan Nayemul Shahriar',
-      email: 'dns@uttara.edu.bd',
-      facultyId: 'DNS',
-      passwordHash: dummyHash,
+      departmentId: sweDept.id,
+      buildingId: mainBuilding.id,
+      roomNumber: '5030 (508)',
+      floor: 5,
+      capacity: 55,
+      currentStatus: RoomStatus.RUNNING_CLASS,
+      currentCourse: 'SWE-321 Software Architecture',
+      currentTeacher: 'DNS',
+      currentBatch: 'Batch 68 (A)',
+      version: 1,
+    },
+  });
+
+  // Room 5028 is AVAILABLE so Section B CR can test "Book for My Section Class"
+  const room5028 = await prisma.room.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      buildingId: mainBuilding.id,
+      roomNumber: '5028 (506)',
+      floor: 5,
+      capacity: 50,
+      currentStatus: RoomStatus.AVAILABLE,
+      version: 1,
+    },
+  });
+
+  const room4012 = await prisma.room.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      buildingId: mainBuilding.id,
+      roomNumber: '4012',
+      floor: 4,
+      capacity: 60,
+      currentStatus: RoomStatus.AVAILABLE,
+      version: 1,
+    },
+  });
+
+  const room3015 = await prisma.room.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      buildingId: mainBuilding.id,
+      roomNumber: '3015',
+      floor: 3,
+      capacity: 45,
+      currentStatus: RoomStatus.RESERVED,
+      currentCourse: 'Special Project Presentation',
+      currentBatch: 'Batch 67',
+      version: 1,
+    },
+  });
+
+  const roomLab = await prisma.room.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      buildingId: labBuilding.id,
+      roomNumber: 'Lab 6001',
+      floor: 6,
+      capacity: 40,
+      currentStatus: RoomStatus.AVAILABLE,
+      version: 1,
+    },
+  });
+  console.log('🚪 Created Classrooms: 5030, 5028, 4012, 3015, Lab 6001.');
+
+  // 7. Create Users for all testing roles
+  // Faculty User (DNS)
+  const facultyDns = await prisma.user.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      fullName: 'Dr. Nazmul Shakib',
+      email: 'faculty.dns@uttara.edu.bd',
+      passwordHash,
       role: Role.FACULTY,
+      facultyId: 'DNS',
+      isEmailVerified: true,
     },
   });
 
-  const crUser = await prisma.user.create({
+  // Section A CR User
+  const crSecA = await prisma.user.create({
     data: {
       universityId: university.id,
-      departmentId: department.id,
-      fullName: 'Tanvir Ahmed (CR Batch 68)',
-      email: 'cr.batch68a@uttara.edu.bd',
+      departmentId: sweDept.id,
+      fullName: 'Tanvir Ahmed (CR A)',
+      email: 'cr.secA@uttara.edu.bd',
+      passwordHash,
+      role: Role.CR,
+      studentId: '2241081001',
       batch: '68',
       section: 'A',
       isApprovedCr: true,
-      passwordHash: dummyHash,
+      isEmailVerified: true,
+    },
+  });
+
+  // Section B CR User
+  const crSecB = await prisma.user.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      fullName: 'Sabbir Hossain (CR B)',
+      email: 'cr.secB@uttara.edu.bd',
+      passwordHash,
       role: Role.CR,
+      studentId: '2241081002',
+      batch: '68',
+      section: 'B',
+      isApprovedCr: true,
+      isEmailVerified: true,
     },
   });
 
-  const studentUser = await prisma.user.create({
+  // Section A Student User
+  const studentSecA = await prisma.user.create({
     data: {
       universityId: university.id,
-      departmentId: department.id,
-      fullName: 'Sadia Rahman (Student)',
-      email: 'student.batch68a@uttara.edu.bd',
-      batch: '68',
-      section: 'A',
-      passwordHash: dummyHash,
+      departmentId: sweDept.id,
+      fullName: 'Rahim Student (Sec A)',
+      email: 'student.secA@uttara.edu.bd',
+      passwordHash,
       role: Role.STUDENT,
-    },
-  });
-  console.log('✅ Seeded 4 Core Roles: Super Admin, Faculty (DNS), CR (Batch 68A), Student');
-
-  // 7. Create Schedule Slots (Master Routine)
-  await prisma.scheduleSlot.create({
-    data: {
-      departmentId: department.id,
-      roomId: createdRooms['AI Lab 5210 (514)'],
-      facultyUserId: facultyUser.id,
-      facultyInitials: 'DNS',
+      studentId: '2241081050',
       batch: '68',
       section: 'A',
-      courseCode: 'CSE06131',
-      courseName: 'Algorithms Design & Analysis',
-      dayOfWeek: DayOfWeek.MON,
-      startTime: '09:30',
-      endTime: '10:50',
+      isEmailVerified: true,
     },
   });
 
-  await prisma.scheduleSlot.create({
-    data: {
-      departmentId: department.id,
-      roomId: createdRooms['5030 (508)'],
-      facultyInitials: 'AMU',
-      batch: '68',
-      section: 'A',
-      courseCode: 'CSE06133',
-      courseName: 'Database Management Systems',
-      dayOfWeek: DayOfWeek.MON,
-      startTime: '11:00',
-      endTime: '12:20',
-    },
-  });
-
-  await prisma.scheduleSlot.create({
-    data: {
-      departmentId: department.id,
-      roomId: createdRooms['Phy Lab 6080 (601)'],
-      facultyInitials: 'RIR',
-      batch: '68',
-      section: 'A',
-      courseCode: 'PHY05111',
-      courseName: 'Engineering Physics Lab',
-      dayOfWeek: DayOfWeek.TUE,
-      startTime: '09:30',
-      endTime: '10:50',
-    },
-  });
-  console.log('✅ Seeded 3 Master Schedule Slots for Batch 68 Section A');
-
-  // 8. Create Sample Emergency Broadcast
-  await prisma.emergencyAnnouncement.create({
+  // Section B Student User
+  const studentSecB = await prisma.user.create({
     data: {
       universityId: university.id,
-      title: 'Midterm Routine Schedule Ingested',
-      message: 'The Spring 2026 routine is now active. CRs can submit schedule adjustments via the dashboard.',
-      isActive: true,
+      departmentId: sweDept.id,
+      fullName: 'Karim Student (Sec B)',
+      email: 'student.secB@uttara.edu.bd',
+      passwordHash,
+      role: Role.STUDENT,
+      studentId: '2241081051',
+      batch: '68',
+      section: 'B',
+      isEmailVerified: true,
     },
   });
-  console.log('✅ Seeded Emergency Announcement');
 
-  console.log('🎉 Seeding successfully completed!');
+  // Super Admin User
+  const superAdmin = await prisma.user.create({
+    data: {
+      universityId: university.id,
+      departmentId: sweDept.id,
+      fullName: 'Chief University Admin',
+      email: 'admin@uttara.edu.bd',
+      passwordHash,
+      role: Role.SUPER_ADMIN,
+      isEmailVerified: true,
+    },
+  });
+  console.log('👥 Created Users: Admin, CR Sec A, CR Sec B, Student Sec A, Student Sec B, Faculty DNS.');
+
+  // 8. Create Schedule Slots across the full week (MON through SUN)
+  // Ensures that whenever the app is tested, Today's Schedule and Weekly Routine have rich data.
+  const days: DayOfWeek[] = [
+    DayOfWeek.MON,
+    DayOfWeek.TUE,
+    DayOfWeek.WED,
+    DayOfWeek.THU,
+    DayOfWeek.FRI,
+    DayOfWeek.SAT,
+    DayOfWeek.SUN,
+  ];
+
+  const slotData = [];
+
+  for (const day of days) {
+    // Section A Timetable
+    slotData.push(
+      {
+        departmentId: sweDept.id,
+        roomId: room4012.id,
+        facultyUserId: null,
+        facultyInitials: 'MAS',
+        batch: '68',
+        section: 'A',
+        courseCode: 'SWE-211',
+        courseName: 'Database Management Systems',
+        dayOfWeek: day,
+        startTime: '08:30',
+        endTime: '10:00',
+        isActive: true,
+      },
+      {
+        departmentId: sweDept.id,
+        roomId: room5030.id,
+        facultyUserId: facultyDns.id,
+        facultyInitials: 'DNS',
+        batch: '68',
+        section: 'A',
+        courseCode: 'SWE-321',
+        courseName: 'Software Architecture & Design',
+        dayOfWeek: day,
+        startTime: '10:00',
+        endTime: '11:30',
+        isActive: true,
+      },
+      {
+        departmentId: sweDept.id,
+        roomId: roomLab.id,
+        facultyUserId: facultyDns.id,
+        facultyInitials: 'DNS',
+        batch: '68',
+        section: 'A',
+        courseCode: 'SWE-411',
+        courseName: 'Machine Learning & AI',
+        dayOfWeek: day,
+        startTime: '01:30',
+        endTime: '03:00',
+        isActive: true,
+      },
+    );
+
+    // Section B Timetable
+    slotData.push(
+      {
+        departmentId: sweDept.id,
+        roomId: room5028.id,
+        facultyUserId: null,
+        facultyInitials: 'KHK',
+        batch: '68',
+        section: 'B',
+        courseCode: 'SWE-322',
+        courseName: 'Web Engineering & Frameworks',
+        dayOfWeek: day,
+        startTime: '11:30',
+        endTime: '01:00',
+        isActive: true,
+      },
+      {
+        departmentId: sweDept.id,
+        roomId: room4012.id,
+        facultyUserId: null,
+        facultyInitials: 'RAH',
+        batch: '68',
+        section: 'B',
+        courseCode: 'SWE-412',
+        courseName: 'Cloud Computing Architecture',
+        dayOfWeek: day,
+        startTime: '03:00',
+        endTime: '04:30',
+        isActive: true,
+      },
+    );
+  }
+
+  await prisma.scheduleSlot.createMany({ data: slotData });
+  console.log(`📅 Created ${slotData.length} Schedule Slots across Monday–Sunday for Batches 68 (A & B).`);
+
+  // 9. Initial Audit Log for Room 5030
+  await prisma.roomLog.create({
+    data: {
+      roomId: room5030.id,
+      changedByUserId: crSecA.id,
+      previousStatus: RoomStatus.AVAILABLE,
+      newStatus: RoomStatus.RUNNING_CLASS,
+      note: 'Scheduled class started: SWE-321 with Faculty DNS',
+    },
+  });
+
+  console.log('\n=============================================================');
+  console.log('✨ DUMMY TEST DATABASE READY FOR TESTING!');
+  console.log('=============================================================');
+  console.log('🔑 ALL ACCOUNTS SHARE THE SAME PASSWORD: Password123!\n');
+  console.log('1. [CR - Section A]:    cr.secA@uttara.edu.bd      (Has running class in Room 5030 to make free)');
+  console.log('2. [CR - Section B]:    cr.secB@uttara.edu.bd      (Can book Room 5030 or 5028 for Batch 68-B)');
+  console.log('3. [Student - Sec A]:   student.secA@uttara.edu.bd (Batch 68, Sec A Schedule & notices)');
+  console.log('4. [Student - Sec B]:   student.secB@uttara.edu.bd (Batch 68, Sec B Schedule & notices)');
+  console.log('5. [Faculty - DNS]:     faculty.dns@uttara.edu.bd  (Teaches SWE-321 & SWE-411)');
+  console.log('6. [Super Admin]:       admin@uttara.edu.bd        (Full campus admin panel access)');
+  console.log('=============================================================\n');
 }
 
 main()

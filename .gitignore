@@ -11,10 +11,17 @@
 *.key
 google-services.json
 GoogleService-Info.plist
+*firebase-adminsdk*.json
+firebase-service-account.json
+service-account*.json
 
-# Node.js & Backend (Dependencies & Build Outputs)
-backend/node_modules/
+# Node.js & Dependencies (Root, Backend, Web)
+node_modules/
+**/node_modules/
 backend/dist/
+web/dist/
+*.tsbuildinfo
+mobile_current.png
 backend/coverage/
 backend/.nyc_output/
 backend/*.log

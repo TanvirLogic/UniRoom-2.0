@@ -1,0 +1,14 @@
+{
+  "typescript.tsdk": "backend/node_modules/typescript/lib",
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "backend/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "backend/dist": true
+  }
+}

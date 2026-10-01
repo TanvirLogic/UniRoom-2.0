@@ -15,13 +15,14 @@
 | :--- | :--- | :---: | :---: |
 | **Milestone 0** | Architecture Blueprint, System Analysis & Handbooks | Task 0.1 - 0.4 | `[x]` Completed |
 | **Milestone 1** | Backend Core, Cloud DB & Prisma Multi-Tenant Schema | Task 1.1 - 1.5 | `[x]` Completed |
-| **Milestone 2** | Multi-Tenant Auth, Cryptographic JWT Rotation & RBAC Guards | Task 2.1 - 2.5 | `[ ]` Queued |
-| **Milestone 3** | Universities, Departments, Campuses & Rooms Module | Task 3.1 - 3.4 | `[ ]` Queued |
+| **Milestone 2** | Multi-Tenant Auth, Cryptographic JWT Rotation & RBAC Guards | Task 2.1 - 2.8 | `[x]` Completed |
+| **Milestone 3** | Universities, Departments, Campuses, Rooms & Web Admin Portal | Task 3.1 - 3.6 | `[x]` Completed |
 | **Milestone 4** | Super Admin Dual-Mode Routine Ingestion (AI + JSON) | Task 4.1 - 4.5 | `[ ]` Queued |
 | **Milestone 5** | Real-Time Engine, WebSockets, Redis Pub/Sub & OCC Locking | Task 5.1 - 5.5 | `[ ]` Queued |
 | **Milestone 6** | Smart Leases, Auto-Release Cron & Emergency Announcements | Task 6.1 - 6.4 | `[ ]` Queued |
 | **Milestone 7** | Multi-Channel Notifications (Resend Email + FCM Push) | Task 7.1 - 7.4 | `[ ]` Queued |
 | **Milestone 8** | Faculty Schedule Aggregation & Section CR Daily Overrides | Task 8.1 - 8.4 | `[ ]` Queued |
+| **Milestone 8.5**| Auto Classrooms, CR Attendance Engine & Faculty 1-on-1 Chat | Task 8.5.1 - 8.5.5 | `[ ]` Queued |
 | **Milestone 9** | Mobile Clean Architecture Foundation (Flutter + Riverpod 2.x) | Task 9.1 - 9.5 | `[ ]` Queued |
 | **Milestone 10**| Mobile Screens & Reactive State (Student, CR & Faculty Views) | Task 10.1 - 10.6| `[ ]` Queued |
 | **Milestone 11**| Automated Testing Trophy (Unit, Widget, Supertest E2E) | Task 11.1 - 11.5| `[ ]` Queued |
@@ -51,9 +52,8 @@
 
 > 📘 **Detailed Milestone 1 Guide**: [`project docs/milestone_one.md`](project%20docs/milestone_one.md) (Prerequisites, dependencies, and task breakdown)  
 > 📘 **Detailed Architecture Learning Guides**:  
-> - Bengali: [`project explanation/milestone_one_learning_bangla.md`](project%20explanation/milestone_one_learning_bangla.md)  
-> - English: [`project explanation/milestone_one_learning_english.md`](project%20explanation/milestone_one_learning_english.md)  
-> - Lifecycle: [`project explanation/src_execution_lifecycle.md`](project%20explanation/src_execution_lifecycle.md)
+> - English Master Handbook: [`project explanation/milestone_one.md`](project%20explanation/milestone_one.md)  
+> - বাংলা সংস্করণ: [`project explanation/milestone_one_bangla.md`](project%20explanation/milestone_one_bangla.md)
 
 - [x] **Task 1.1: Backend Project Initialization & Monorepo Structure**
   - **Objective**: Initialize `backend/` using TypeScript and NestJS with strict ESLint and Prettier configs.
@@ -87,63 +87,105 @@
 
 ---
 
-## 🔑 Milestone 2: Multi-Tenant Authentication & Cryptographic RBAC
+## 🔑 Milestone 2: Multi-Tenant Authentication & Cryptographic RBAC (`[x]` COMPLETED)
 
-- [ ] **Task 2.1: Password Hashing & User Registration Service**
-  - **Objective**: Secure registration endpoint for Students, CRs, and Faculty with `bcrypt` (12 rounds).
+> 📘 **Detailed Milestone 2 Guide**: [`project docs/milestone_two.md`](project%20docs/milestone_two.md) (Specifications, DTO contracts, and security architecture)  
+> 📘 **Detailed Architecture Learning Guides**:  
+> - English Master Handbook: [`project explanation/milestone_two.md`](project%20explanation/milestone_two.md)  
+> - বাংলা সংস্করণ: [`project explanation/milestone_two_bangla.md`](project%20explanation/milestone_two_bangla.md)  
+> - Master Directory: [`project explanation/README.md`](project%20explanation/README.md)
+
+- [x] **Task 2.1: Password Hashing & User Registration Service**
+  - **Objective**: Secure registration endpoint for Students, CRs, and Faculty with `bcrypt` (10 rounds).
   - **SWE Principle**: Cryptographic salt & hashing; prevention of rainbow table attacks.
   - **Files**: `backend/src/modules/auth/auth.service.ts`, `backend/src/modules/auth/dto/register.dto.ts`.
-  - **Verification**: Unit test verifying plain-text passwords are never saved.
+  - **Verification**: Verified registration of Student and CR via `POST /api/v1/auth/register`.
 
-- [ ] **Task 2.2: JWT Access Token (15m) & Refresh Token Rotation (7d)**
-  - **Objective**: Implement short-lived Access Token and secure Redis-backed Refresh Token Rotation.
-  - **SWE Principle**: Token Rotation Pattern, Automatic session revocation on token reuse detection.
+- [x] **Task 2.2: JWT Access Token (15m) & Refresh Token Rotation (7d)**
+  - **Objective**: Implement short-lived Access Token and secure Refresh Token Rotation pattern.
+  - **SWE Principle**: Token Rotation Pattern, stateless fast authorization, window-of-vulnerability reduction.
   - **Files**: `backend/src/modules/auth/strategies/jwt.strategy.ts`, `backend/src/modules/auth/auth.controller.ts`.
-  - **Verification**: Refresh endpoint issues new pair and invalidates old refresh token in Redis.
+  - **Verification**: Verified `POST /api/v1/auth/login` and `POST /api/v1/auth/refresh` issuing new token pairs.
 
-- [ ] **Task 2.3: Multi-Tenant Guard (`TenantGuard`)**
+- [x] **Task 2.3: Multi-Tenant Guard (`TenantGuard`)**
   - **Objective**: Extract `universityId` and `departmentId` from JWT and enforce query scoping.
   - **SWE Principle**: Zero Cross-Tenant Data Leaks, Multi-Tenant Logical Boundary Enforcement.
   - **Files**: `backend/src/common/guards/tenant.guard.ts`.
-  - **Verification**: User from University A attempting to query University B gets HTTP 403 Forbidden.
+  - **Verification**: Cross-tenant violations rejected with HTTP 403 Forbidden.
 
-- [ ] **Task 2.4: Role-Based Access Control (`RolesGuard`)**
+- [x] **Task 2.4: Role-Based Access Control (`RolesGuard`)**
   - **Objective**: Implement `@Roles(Role.SUPER_ADMIN, Role.CR, Role.FACULTY, Role.STUDENT)` decorator and guard.
   - **SWE Principle**: Principle of Least Privilege (PoLP).
   - **Files**: `backend/src/common/decorators/roles.decorator.ts`, `backend/src/common/guards/roles.guard.ts`.
-  - **Verification**: Student hitting Super Admin route gets HTTP 403.
+  - **Verification**: Verified Student calling `/api/v1/auth/admin-test` receives HTTP 403 Forbidden, while Super Admin receives HTTP 200 OK.
 
-- [ ] **Task 2.5: Interactive Swagger / OpenAPI 3.0 Documentation**
+- [x] **Task 2.5: Interactive Swagger / OpenAPI 3.0 Documentation**
   - **Objective**: Auto-generate live API documentation at `/api/docs` with Bearer auth support.
   - **SWE Principle**: Self-documenting API, Contract-First development.
-  - **Files**: `backend/src/main.ts` (Swagger bootstrap).
-  - **Verification**: Browser displays interactive Swagger UI at `http://localhost:3000/api/docs`.
+  - **Files**: `backend/src/modules/auth/auth.controller.ts`, `backend/src/main.ts`.
+  - **Verification**: Swagger UI live at `http://localhost:3000/api/docs` with Bearer JWT authorizer.
+
+- [x] **Task 2.6: Institutional Email Verification via Gmail SMTP ($0 Free Tier)**
+  - **Objective**: 6-digit cryptographically generated PIN sent to institutional email upon registration; user activated upon verification.
+  - **SWE Principle**: Defense-in-depth, 60s cooldown rate limiting, 5-attempt brute-force protection, hashed PIN storage.
+  - **Files**: `backend/src/modules/email/`, `backend/src/modules/auth/dto/verify-email.dto.ts`.
+  - **Verification**: Live email dispatch verified with real Gmail SMTP.
+
+- [x] **Task 2.7: Cryptographic Forgot Password & Password Reset Pipeline**
+  - **Objective**: Endpoints `POST /auth/forgot-password`, `POST /auth/verify-reset-pin`, and `POST /auth/reset-password` using dedicated `PasswordResetPin` table.
+  - **SWE Principle**: Zero replay attacks, automatic cleanup upon reset, authenticated password hashing.
+  - **Files**: `backend/src/modules/auth/dto/forgot-password.dto.ts`, `reset-password.dto.ts`.
+  - **Verification**: Complete automated test suite passed.
+
+- [x] **Task 2.8: Institutional `studentId` Roll Number Registration & `/auth/me` Profile Enrichment**
+  - **Objective**: Require institutional `studentId` (e.g. `2241081422`) for Student and CR registrations; expose in JWT and `/auth/me`.
+  - **SWE Principle**: Strong institutional identity for academic section rosters and attendance tracking.
+  - **Files**: `backend/prisma/schema.prisma`, `backend/src/modules/auth/dto/register.dto.ts`, `backend/src/modules/auth/auth.service.ts`.
+  - **Verification**: Complete integration test verified registration, uniqueness validation, and `/auth/me` extraction.
 
 ---
 
-## 🚪 Milestone 3: Universities, Departments, Campuses & Rooms Module
+## 🚪 Milestone 3: Universities, Departments, Campuses & Rooms Module (`[x]` COMPLETED)
 
-- [ ] **Task 3.1: University & Department Management (Super Admin)**
+> 📘 **Detailed Milestone 3 Guide**: [`project docs/milestone_three.md`](project%20docs/milestone_three.md) (Campus hierarchy, room engine specs, and 1-tap algorithm)  
+> 📘 **Detailed Architecture Learning Guides**:  
+> - English Master Handbook: [`project explanation/milestone_three.md`](project%20explanation/milestone_three.md)  
+> - বাংলা সংস্করণ: [`project explanation/milestone_three_bangla.md`](project%20explanation/milestone_three_bangla.md)  
+> - Master Directory: [`project explanation/README.md`](project%20explanation/README.md)
+
+- [x] **Task 3.1: University & Department Management (Super Admin)**
   - **Objective**: Endpoints to create and manage Universities and Departments.
   - **Files**: `backend/src/modules/universities/`.
-  - **Verification**: CRUD operations verified via Swagger.
+  - **Verification**: CRUD operations verified via integration tests and Swagger.
 
-- [ ] **Task 3.2: Multi-Campus & Building Disambiguation**
+- [x] **Task 3.2: Multi-Campus & Building Disambiguation**
   - **Objective**: Add Building and Floor models to rooms (e.g. "Permanent Campus - Building B, 5th Floor").
-  - **Files**: `backend/src/modules/rooms/dto/create-room.dto.ts`.
-  - **Verification**: Room creation mandates campus and building attribution.
+  - **Files**: `backend/src/modules/rooms/dto/create-building.dto.ts`, `backend/src/modules/rooms/dto/create-room.dto.ts`.
+  - **Verification**: Room creation mandates campus and building attribution; compound uniqueness `[buildingId, roomNumber]`.
 
-- [ ] **Task 3.3: Room Availability Query Engine (Optimized Index Reads)**
-  - **Objective**: Endpoint `GET /api/v1/rooms` with filtering by Department, Status, and Building.
-  - **SWE Principle**: Composite B-Tree indexing query optimization.
-  - **Files**: `backend/src/modules/rooms/rooms.service.ts`.
-  - **Verification**: Benchmark query response time under 10ms.
+- [x] **Task 3.3: Room Availability Query Engine (Optimized Index Reads)**
+  - **Objective**: Endpoint `GET /api/v1/rooms` with filtering by Department, Status, Building, Campus, Floor, Capacity, and Search.
+  - **SWE Principle**: Composite B-Tree indexing query optimization and multi-tenant scoping.
+  - **Files**: `backend/src/modules/rooms/rooms.service.ts`, `backend/src/modules/rooms/rooms.controller.ts`.
+  - **Verification**: Query returns paginated rooms and live status summary counts (available, running, reserved, maintenance).
 
-- [ ] **Task 3.4: "Find Me a Free Room Now" 1-Tap Algorithm**
-  - **Objective**: Algorithmic endpoint taking `capacity` and `durationMinutes`, returning top 3 free rooms.
-  - **SWE Principle**: Relational filtering with interval overlap exclusion.
-  - **Files**: `backend/src/modules/rooms/rooms.controller.ts`.
-  - **Verification**: Successfully returns rooms with no overlapping schedule slots.
+- [x] **Task 3.4: "Find Me a Free Room Now" 1-Tap Algorithm**
+  - **Objective**: Algorithmic endpoint taking `durationMinutes`, `minCapacity`, and `startTime`, returning ranked free rooms.
+  - **SWE Principle**: Relational interval overlap calculation (`slot.startTime < reqEnd && slot.endTime > reqStart`) merged with daily `ScheduleOverride` cancellation rules.
+  - **Files**: `backend/src/modules/rooms/rooms.service.ts`, `backend/src/modules/rooms/dto/find-free-room.dto.ts`.
+  - **Verification**: Successfully ranks available rooms with next class preview and remaining free minutes.
+
+- [x] **Task 3.5: Optimistic Concurrency Control (OCC) & Audit Logging**
+  - **Objective**: Endpoint `PATCH /api/v1/rooms/:id/status` enforcing OCC version checks and appending to `RoomLog`.
+  - **SWE Principle**: Race-condition prevention without heavy row locks; audit trail for status modifications.
+  - **Files**: `backend/src/modules/rooms/rooms.service.ts`, `backend/src/modules/rooms/dto/update-room-status.dto.ts`.
+  - **Verification**: Concurrent update conflict returns HTTP 409 ConflictException; valid update increments version and writes `RoomLog`.
+
+- [x] **Task 3.6: Clean UI/UX Web Admin Portal (`web/`)**
+  - **Objective**: Modern, high-performance Super Admin web portal using React 18, Vite, Tailwind CSS, and Lucide icons.
+  - **SWE Principle**: Multi-tenant tenant switcher, responsive data tables, live OCC status toggles, visual batch & cohort studio, and zero-canvas overhead.
+  - **Files**: `web/src/` (Auth, Dashboard, Universities, Departments, Cohorts Studio, Rooms Inventory).
+  - **Verification**: Production build compiles with 0 errors (`npm run build`), authenticated against NestJS backend on `:3000`.
 
 ---
 
@@ -280,58 +322,124 @@
 
 ---
 
-## 📱 Milestone 9: Mobile Clean Architecture (Flutter + Riverpod 2.x)
+## 🏛️ Milestone 8.5: Auto Classrooms, CR Attendance Engine & Faculty 1-on-1 Chat
 
-- [ ] **Task 9.1: Flutter Clean Monorepo Workspace Initialization**
-  - **Objective**: Initialize clean Flutter 3.x project in `mobile/` with Material 3 Dark theme.
-  - **Files**: `mobile/pubspec.yaml`, `mobile/lib/main.dart`.
+- [ ] **Task 8.5.1: Routine-Driven Virtual Classroom Ingestion & Membership Mapping**
+  - **Objective**: When Master Routine is ingested, automatically instantiate virtual classrooms for each unique `(Course, Faculty, Batch, Section)` triplet with zero manual setup.
+  - **SWE Principle**: Event-driven Relational Projection, automated group membership.
+  - **Files**: `backend/src/modules/classrooms/`.
 
-- [ ] **Task 9.2: Strict Linting Suite (`analysis_options.yaml`)**
-  - **Objective**: Configure Very Good Analysis ruleset enforcing immutable state and clean code.
-  - **Files**: `mobile/analysis_options.yaml`.
-  - **Verification**: `flutter analyze` passes with 0 warnings.
+- [ ] **Task 8.5.2: CR Section Student Roster & Live Attendance Engine**
+  - **Objective**: Endpoint `GET /api/v1/attendance/roster` for verified CRs to fetch registered students of their batch & section, and `POST /api/v1/attendance/session` to log attendance for a specific course & time slot.
+  - **SWE Principle**: Role-scoped authorization, transactional snapshot logging.
+  - **Files**: `backend/src/modules/attendance/`.
 
-- [ ] **Task 9.3: Core Network Layer (Dio + Automatic JWT Refresh Interceptor)**
-  - **Objective**: Dio client that transparently intercepts HTTP 401s, calls refresh token, and retries original request.
-  - **SWE Principle**: Transparent Token Rotation, User Session Persistence.
-  - **Files**: `mobile/lib/core/network/api_client.dart`, `mobile/lib/core/network/token_interceptor.dart`.
+- [ ] **Task 8.5.3: CR 1-Tap Formatted Clipboard Attendance Exporter**
+  - **Objective**: Formatter endpoint producing clean export text (`2241081422 - Md Tanvir Ahmed ,\n2241081417 - Mst Sumona Akter Liza`) for instant WhatsApp/Messenger/Email faculty handoff.
+  - **SWE Principle**: Mobile Ergonomics & Frictionless User Experience.
+  - **Files**: `backend/src/modules/attendance/attendance.service.ts`.
 
-- [ ] **Task 9.4: Functional Error Handling (`Result<T, Failure>`)**
-  - **Objective**: Type-safe error monad eliminating untyped exception throwing in UI.
-  - **Files**: `mobile/lib/core/errors/failures.dart`, `mobile/lib/core/utils/result.dart`.
+- [ ] **Task 8.5.4: Faculty Academic Hub (Exam/Quiz Notices & Resource PDF Uploads)**
+  - **Objective**: Endpoints for Course Faculty to post urgent exam/quiz notices and upload/link lecture slides, lab manuals, and PDF study materials.
+  - **Files**: `backend/src/modules/classrooms/notices/`, `backend/src/modules/classrooms/resources/`.
 
-- [ ] **Task 9.5: Declarative Routing with Auth Guards (GoRouter)**
-  - **Objective**: GoRouter setup with redirect logic: unauthenticated users redirected to login, pending CRs to waiting screen.
-  - **Files**: `mobile/lib/app/router.dart`.
+- [ ] **Task 8.5.5: Dedicated 1-to-1 Real-Time Chat (Section CR ↔ Course Faculty)**
+  - **Objective**: Private, direct messaging channel strictly between the Section CR and the Course Faculty teaching that section to coordinate attendance, class shifts, and syllabus discussions.
+  - **SWE Principle**: Scoped P2P Messaging, noise elimination.
+  - **Files**: `backend/src/modules/chat/`.
 
 ---
 
-## 🎨 Milestone 10: Mobile Reactive Screens & Battery-Friendly WebSockets
+## 📱 Milestone 9: Mobile Clean Architecture & Complete Authentication Suite (Flutter + Provider)
 
-- [ ] **Task 10.1: Auth Feature (Login, Registration, University Selector)**
-  - **Objective**: Reactive authentication screens with Riverpod `AsyncNotifier`.
-  - **Files**: `mobile/lib/features/auth/`.
+- [x] **Task 9.1: Flutter Mobile Workspace Initialization & Minimalist Theme (Sky Blue, Blue, White)**
+  - **Objective**: Initialize clean Flutter 3.x project in `mobile/` with a modern, minimalist design system using Sky Blue (`#0284C7`), Deep Blue (`#1D4ED8`), and Crisp White (`#FFFFFF`, `#F8FAFC`).
+  - **SWE Principle**: Cohesive Material 3 Design System, responsive typography, rounded cards (16px), subtle shadows.
+  - **Files**: `mobile/pubspec.yaml`, `mobile/lib/core/theme/app_theme.dart`, `mobile/lib/core/constants/app_colors.dart`.
+  - **Verification**: `flutter analyze` passes with 0 issues.
 
-- [ ] **Task 10.2: Student Dashboard Screen ("My Routine Today" + Room Status)**
-  - **Objective**: Dashboard displaying student's daily timetable timeline and live room availability.
-  - **Files**: `mobile/lib/features/home/presentation/screens/student_dashboard_screen.dart`.
+- [x] **Task 9.2: Local Storage & Clean HTTP Service Layer (`AuthService` + `SharedPreferences`)**
+  - **Objective**: Lightweight, reliable HTTP service consuming NestJS auth endpoints (`/auth/register`, `/auth/login`, `/auth/verify-email`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/me`) and persistent token storage.
+  - **SWE Principle**: Separation of Concerns, Clean Error Extraction.
+  - **Files**: `mobile/lib/core/constants/api_constants.dart`, `mobile/lib/services/auth_service.dart`.
+  - **Verification**: Integration tested against live NestJS endpoints.
 
-- [ ] **Task 10.3: Class Representative (CR) Dashboard Screen**
-  - **Objective**: CR controls to occupy/release rooms, book make-up classes, and cancel today's slots.
-  - **Files**: `mobile/lib/features/home/presentation/screens/cr_dashboard_screen.dart`.
+- [x] **Task 9.3: Auth Domain Entity Model (`UserModel`)**
+  - **Objective**: Clean Dart entity model representing student/CR/faculty profile with `fromJson` and `toJson` serialization.
+  - **SWE Principle**: Strongly Typed Domain Modeling, Null Safety.
+  - **Files**: `mobile/lib/models/user_model.dart`.
 
-- [ ] **Task 10.4: Faculty / Mentor Dashboard Screen**
-  - **Objective**: Consolidated teacher schedule with 1-click cancellation and room shift buttons.
-  - **Files**: `mobile/lib/features/home/presentation/screens/faculty_dashboard_screen.dart`.
+- [x] **Task 9.4: Reactive State Management with Provider (`AuthProvider extends ChangeNotifier`)**
+  - **Objective**: Beginner-friendly and viva-defensible state management managing `isLoading`, `errorMessage`, `user`, and `pendingEmail`.
+  - **SWE Principle**: Unidirectional Data Flow, `notifyListeners()` triggering clean UI rebuilds.
+  - **Files**: `mobile/lib/providers/auth_provider.dart`.
 
-- [ ] **Task 10.5: Battery-Friendly WebSocket Lifecycle Manager**
-  - **Objective**: Bind WebSocket connection to Flutter `AppLifecycleState` (connected in foreground, disconnected in background).
-  - **SWE Principle**: Battery conservation, Mobile Operating System Compliance.
-  - **Files**: `mobile/lib/core/services/realtime_service.dart`.
+- [x] **Task 9.5: Minimalist Modern Auth UI Screens (Sky Blue & White Design)**
+  - **Objective**: Complete suite of modern, user-friendly authentication screens:
+    1. **Splash Screen**: Animated logo + session restoration.
+    2. **Login Screen**: Minimalist input cards, show/hide password, "Forgot Password?" link, register navigation.
+    3. **Registration Screen**: Role toggle (Student / CR / Faculty), input fields for `studentId`, `batch`, `section`, `facultyId`, `fullName`, `email`, `password`.
+    4. **Email PIN Verification Screen**: 6-digit PIN input, 60s cooldown timer, resend button.
+    5. **Forgot & Reset Password Screens**: Step A (Enter email) -> Step B (Enter PIN & new password) with feedback snackbars.
+    6. **Home / Dashboard Landing Screen**: Greeting with role badge, academic profile breakdown, quick actions, and sign-out dialog.
+  - **SWE Principle**: Responsive UI, Form Validation, Clear Feedback.
+  - **Files**: `mobile/lib/screens/`.
+  - **Verification**: Verified with `flutter analyze` (0 issues) and `flutter test` (all passed).
 
-- [ ] **Task 10.6: Offline-First Local Cache (Hive / SecureStorage)**
-  - **Objective**: Cache last synchronized routine so students can view class schedules without active internet.
-  - **Files**: `mobile/lib/core/storage/local_cache.dart`.
+- [x] **Task 9.6: Database-Driven Cascading Dropdowns (University $\to$ Department $\to$ Batch $\to$ Section)**
+  - **Objective**: Replace manual batch/section text entry with dynamic, database-backed cascading dropdowns populated via `GET /api/v1/meta/registration-options`. Super Admins configure batches and sections, and routine ingestion automatically discovers new ones.
+  - **SWE Principle**: Cascading Reactive UI, Data Normalization, Single Source of Truth.
+  - **Files**: `backend/src/modules/meta/`, `mobile/lib/models/registration_options_model.dart`, `mobile/lib/services/auth_service.dart`, `mobile/lib/providers/auth_provider.dart`, `mobile/lib/screens/register_screen.dart`.
+  - **Verification**: Verified live endpoint against Neon DB, unit tests in `mobile/test/registration_options_test.dart`, and widget tests in `mobile/test/register_screen_test.dart`.
+
+---
+
+## 🎨 Milestone 10: Mobile Reactive Screens, Role Nav Shell & Real-Time Automation
+
+> **Theme**: Clean Modern White (`#FFFFFF`, `#F8FAFC`), Sky Blue (`#0284C7`), and Light Blue (`#E0F2FE`) Palette.
+
+- [x] **Task 10.1: Design Tokens & Palette Refinement (White, Sky Blue, Light Blue)**
+  - **Objective**: Refine `app_colors.dart` and `app_theme.dart` with 20px rounded cards, frosted AppBars, subtle sky drop shadows, and responsive typography hierarchy.
+  - **Files**: `mobile/lib/core/constants/app_colors.dart`, `mobile/lib/core/theme/app_theme.dart`.
+
+- [x] **Task 10.2: Backend Profile Update API (`PATCH /api/v1/auth/profile`)**
+  - **Objective**: Endpoint allowing students and CRs to update `fullName`, `studentId`, `departmentId`, `batch`, and `section` with relational integrity and sanitized profile response.
+  - **Files**: `backend/src/modules/auth/auth.controller.ts`, `backend/src/modules/auth/auth.service.ts`.
+
+- [x] **Task 10.3: Mobile Data Services & State Providers (`ScheduleService`, `RoomService`)**
+  - **Objective**: Services & Providers to fetch schedules (`GET /api/v1/schedules`), calculate real-time running/upcoming slots, and trigger room status updates (`PATCH /api/v1/rooms/:id/status`).
+  - **Files**: `mobile/lib/services/schedule_service.dart`, `mobile/lib/services/room_service.dart`, `mobile/lib/providers/schedule_provider.dart`, `mobile/lib/providers/room_provider.dart`.
+
+- [x] **Task 10.4: Dynamic Role-Based Navigation Shell (`MainNavigationShell`)**
+  - **Objective**: Custom bottom navigation bar automatically tailored by user role:
+    - **Student**: Today / Live Schedule ➔ Weekly Routine Matrix ➔ Free Rooms ➔ Cohort Profile
+    - **CR**: Today / Live Schedule ➔ CR Command & Broadcast ➔ Weekly Routine Matrix ➔ Cohort Profile
+    - **Faculty**: Today's Lectures ➔ Weekly Schedule ➔ Campus Rooms ➔ Faculty Profile
+  - **Files**: `mobile/lib/screens/main_navigation_shell.dart`.
+
+- [x] **Task 10.5: Automated "Running Class" Engine & Today's Schedule Screen**
+  - **Objective**: Real-time interval matching comparing device clock against today's routine slots. Displays hero card with live pulsing badge for current running class, countdown timer for upcoming classes, room numbers, floors, and teacher codes.
+  - **Files**: `mobile/lib/screens/today_schedule_screen.dart`.
+
+- [x] **Task 10.6: Weekly Routine Matrix Screen with Interactive Day & Course Filters**
+  - **Objective**: Day-by-day timetable view with horizontal pill selectors (MON-SUN), course code search, and room details.
+  - **Files**: `mobile/lib/screens/weekly_routine_screen.dart`.
+
+- [x] **Task 10.7: CR Command Center (1-Tap Room Release & In-App Broadcast Alerts)**
+  - **Objective**: CR dashboard allowing 1-tap room freeing ("Make Room Free") when class is cancelled or dismissed early. Updates room to `AVAILABLE` with OCC version lock and triggers broadcast alert to other CRs and students.
+  - **Files**: `mobile/lib/screens/cr_command_screen.dart`.
+
+- [x] **Task 10.8: 1-Tap Free Room Finder Screen (Building & Floor Grouping)**
+  - **Objective**: Real-time listing of available rooms across campus buildings showing capacity, floor, and free duration windows.
+  - **Files**: `mobile/lib/screens/free_rooms_screen.dart`.
+
+- [x] **Task 10.9: Faculty Schedule View (Initials-Based Timetable Mapping)**
+  - **Objective**: Personalized teacher view filtered by faculty code (e.g. `DNS`) displaying assigned rooms, floors, student batches, and upcoming class countdown.
+  - **Files**: `mobile/lib/screens/faculty_schedule_screen.dart`.
+
+- [x] **Task 10.10: Student & CR Cohort Profile Editor with Instant Re-Alignment**
+  - **Objective**: Interactive profile screen with "Edit Cohort" sheet enabling students and CRs to update their Department, Batch, Section, Name, and Student ID. Saving updates backend profile and triggers reactive timetable reload with zero app restart.
+  - **Files**: `mobile/lib/screens/cohort_profile_screen.dart`.
 
 ---
 
