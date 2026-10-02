@@ -100,4 +100,20 @@ class UserModel {
   bool get isCr => role == 'CR';
   bool get isFaculty => role == 'FACULTY';
   bool get isSuperAdmin => role == 'SUPER_ADMIN';
+
+  /// Resolves short department code (e.g. 'SWE', 'CSE') even from cached department names
+  String get effectiveDepartmentCode {
+    if (departmentCode != null && departmentCode!.trim().isNotEmpty) {
+      return departmentCode!.trim().toUpperCase();
+    }
+    if (departmentName != null) {
+      final lower = departmentName!.toLowerCase();
+      if (lower.contains('software')) return 'SWE';
+      if (lower.contains('computer')) return 'CSE';
+      if (lower.contains('business') || lower.contains('bba')) return 'BBA';
+      if (lower.contains('civil')) return 'CE';
+      if (lower.contains('electrical') || lower.contains('eee')) return 'EEE';
+    }
+    return departmentId.isNotEmpty ? departmentId : 'SWE';
+  }
 }

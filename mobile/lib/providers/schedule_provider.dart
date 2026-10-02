@@ -117,9 +117,7 @@ class ScheduleProvider extends ChangeNotifier {
 
   /// Load or synchronize schedules matching the authenticated user profile
   Future<void> syncWithUser(UserModel user, {bool force = false}) async {
-    final deptCode = (user.departmentCode?.isNotEmpty == true)
-        ? user.departmentCode!
-        : (user.departmentId.isNotEmpty ? user.departmentId : (user.departmentName ?? 'SWE'));
+    final deptCode = user.effectiveDepartmentCode;
     final batch = user.batch;
     final section = user.section;
     final facultyId = user.facultyId;

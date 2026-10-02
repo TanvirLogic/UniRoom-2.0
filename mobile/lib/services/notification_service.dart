@@ -63,6 +63,9 @@ class NotificationService {
 
       debugPrint('[NotificationService] Notification permission status: ${settings.authorizationStatus}');
 
+      final fcmToken = await _messaging!.getToken();
+      debugPrint('[FCM Token] $fcmToken');
+
       // Foreground message listener
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('[FCM Foreground] ${message.notification?.title}: ${message.notification?.body}');
