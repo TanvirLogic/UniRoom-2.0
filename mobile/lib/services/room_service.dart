@@ -118,8 +118,8 @@ class RoomService {
       throw Exception('Invalid Room ID: Cannot update room state without a valid ID or room number.');
     }
 
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('Authentication token missing. Please log in.');
+    var token = await _authService.getAccessToken();
+    if (token == null) throw Exception('Authentication required. Please log in.');
 
     final uri = Uri.parse(ApiConstants.roomStatus(cleanId));
     final body = {
@@ -128,7 +128,7 @@ class RoomService {
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     };
 
-    final response = await http.patch(
+    var response = await http.patch(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -136,6 +136,20 @@ class RoomService {
       },
       body: jsonEncode(body),
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await _authService.refreshToken();
+      if (freshToken != null) {
+        response = await http.patch(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = jsonDecode(response.body);
@@ -178,8 +192,8 @@ class RoomService {
       throw Exception('Invalid Room ID: Cannot book room without a valid ID or room number.');
     }
 
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('Authentication token missing. Please log in.');
+    var token = await _authService.getAccessToken();
+    if (token == null) throw Exception('Authentication required. Please log in.');
 
     final uri = Uri.parse('${ApiConstants.rooms}/$cleanId/book-extra-class');
     final body = {
@@ -193,7 +207,7 @@ class RoomService {
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     };
 
-    final response = await http.post(
+    var response = await http.post(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -201,6 +215,20 @@ class RoomService {
       },
       body: jsonEncode(body),
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await _authService.refreshToken();
+      if (freshToken != null) {
+        response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = jsonDecode(response.body);

@@ -38,8 +38,8 @@ export class AuthService {
   ) {
     this.accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET')!;
     this.refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET')!;
-    this.accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRATION', '15m');
-    this.refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d');
+    this.accessExpiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRATION', '7d');
+    this.refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRATION', '30d');
   }
 
   private generateSixDigitPin(): string {

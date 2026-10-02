@@ -289,6 +289,20 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(false);
   }
 
+  /// 10. Refresh Token Session
+  Future<bool> refreshToken() async {
+    final token = await _authService.refreshToken();
+    if (token != null) {
+      final user = await _authService.getSavedUser();
+      if (user != null) {
+        _user = user;
+        notifyListeners();
+      }
+      return true;
+    }
+    return false;
+  }
+
   /// Manually set pending email for OTP flows
   void setPendingEmail(String email) {
     _pendingEmail = email.trim().toLowerCase();

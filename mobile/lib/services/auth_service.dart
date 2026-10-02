@@ -181,17 +181,30 @@ class AuthService {
 
   /// 8. Fetch current authenticated profile (/me)
   Future<UserModel?> getProfile() async {
-    final token = await getAccessToken();
+    var token = await getAccessToken();
     if (token == null) return null;
 
     final url = Uri.parse(ApiConstants.me);
-    final response = await http.get(
+    var response = await http.get(
       url,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await refreshToken();
+      if (freshToken != null) {
+        response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+        );
+      }
+    }
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
@@ -248,7 +261,7 @@ class AuthService {
     String? section,
     String? facultyId,
   }) async {
-    final token = await getAccessToken();
+    var token = await getAccessToken();
     if (token == null) throw Exception('Authentication token missing. Please log in.');
 
     final url = Uri.parse(ApiConstants.profile);
@@ -261,7 +274,7 @@ class AuthService {
       if (facultyId != null && facultyId.trim().isNotEmpty) 'facultyId': facultyId.trim().toUpperCase(),
     };
 
-    final response = await http.patch(
+    var response = await http.patch(
       url,
       headers: {
         'Content-Type': 'application/json',
@@ -269,6 +282,20 @@ class AuthService {
       },
       body: jsonEncode(body),
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await refreshToken();
+      if (freshToken != null) {
+        response = await http.patch(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    }
 
     final data = _handleResponse(response);
     final updatedUser = UserModel.fromJson(data);
@@ -280,9 +307,102 @@ class AuthService {
     return updatedUser;
   }
 
-  /// Retrieve stored JWT access token
-  Future<String?> getAccessToken() async {
+  /// Check if a JWT token is expired or close to expiring (within 60 seconds)
+  static bool isTokenExpired(String? token) {
+    if (token == null || token.isEmpty) return true;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      String payload = parts[1];
+      switch (payload.length % 4) {
+        case 2:
+          payload += '==';
+          break;
+        case 3:
+          payload += '=';
+          break;
+      }
+      final decodedBytes = base64Url.decode(payload);
+      final decodedString = utf8.decode(decodedBytes);
+      final map = jsonDecode(decodedString);
+      if (map is Map<String, dynamic> && map.containsKey('exp')) {
+        final exp = map['exp'] as int;
+        final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+        return DateTime.now().isAfter(expiryDate.subtract(const Duration(seconds: 60)));
+      }
+      return false;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<String?>? _refreshFuture;
+
+  /// Exchange stored refresh token for a fresh token pair
+  Future<String?> refreshToken() async {
+    if (_refreshFuture != null) {
+      return _refreshFuture;
+    }
+    _refreshFuture = _performTokenRefresh();
+    try {
+      return await _refreshFuture;
+    } finally {
+      _refreshFuture = null;
+    }
+  }
+
+  Future<String?> _performTokenRefresh() async {
     final prefs = await SharedPreferences.getInstance();
+    final currentRefreshToken = prefs.getString(_keyRefreshToken);
+    if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
+      return null;
+    }
+
+    try {
+      final url = Uri.parse(ApiConstants.refresh);
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': currentRefreshToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        final rawData = decoded is Map<String, dynamic> && decoded.containsKey('data')
+            ? decoded['data']
+            : decoded;
+
+        if (rawData is Map<String, dynamic> && rawData.containsKey('accessToken')) {
+          final newAccessToken = rawData['accessToken'] as String;
+          await prefs.setString(_keyAccessToken, newAccessToken);
+
+          if (rawData.containsKey('refreshToken') && rawData['refreshToken'] != null) {
+            await prefs.setString(_keyRefreshToken, rawData['refreshToken'] as String);
+          }
+          if (rawData.containsKey('user') && rawData['user'] is Map<String, dynamic>) {
+            await prefs.setString(_keyUserData, jsonEncode(rawData['user']));
+          }
+          return newAccessToken;
+        }
+      }
+    } catch (_) {
+      // Network or parsing error during refresh
+    }
+    return null;
+  }
+
+  /// Retrieve stored JWT access token, automatically refreshing if expired
+  Future<String?> getAccessToken({bool forceRefresh = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_keyAccessToken);
+
+    if (forceRefresh || token == null || isTokenExpired(token)) {
+      final freshToken = await refreshToken();
+      if (freshToken != null) {
+        return freshToken;
+      }
+    }
+
     return prefs.getString(_keyAccessToken);
   }
 

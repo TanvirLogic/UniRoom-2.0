@@ -59,8 +59,8 @@ class ScheduleService {
     required String reason,
     bool freeRoom = true,
   }) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('Authentication token missing. Please log in.');
+    var token = await _authService.getAccessToken();
+    if (token == null) throw Exception('Authentication required. Please log in.');
 
     final uri = Uri.parse(ApiConstants.cancelSlotToday(slotId));
     final body = {
@@ -68,7 +68,7 @@ class ScheduleService {
       'freeRoom': freeRoom,
     };
 
-    final response = await http.post(
+    var response = await http.post(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -76,6 +76,20 @@ class ScheduleService {
       },
       body: jsonEncode(body),
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await _authService.refreshToken();
+      if (freshToken != null) {
+        response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
@@ -96,8 +110,8 @@ class ScheduleService {
     String? newRoomId,
     required String reason,
   }) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('Authentication token missing. Please log in.');
+    var token = await _authService.getAccessToken();
+    if (token == null) throw Exception('Authentication required. Please log in.');
 
     final uri = Uri.parse(ApiConstants.rescheduleSlotToday(slotId));
     final body = {
@@ -107,7 +121,7 @@ class ScheduleService {
       'reason': reason.trim(),
     };
 
-    final response = await http.post(
+    var response = await http.post(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -115,6 +129,20 @@ class ScheduleService {
       },
       body: jsonEncode(body),
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await _authService.refreshToken();
+      if (freshToken != null) {
+        response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
@@ -129,17 +157,30 @@ class ScheduleService {
 
   /// Undo / Revert Today's Override on a Class Slot
   Future<bool> undoTodayOverride({required String slotId}) async {
-    final token = await _authService.getAccessToken();
-    if (token == null) throw Exception('Authentication token missing. Please log in.');
+    var token = await _authService.getAccessToken();
+    if (token == null) throw Exception('Authentication required. Please log in.');
 
     final uri = Uri.parse(ApiConstants.undoSlotOverrideToday(slotId));
-    final response = await http.delete(
+    var response = await http.delete(
       uri,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
     );
+
+    if (response.statusCode == 401) {
+      final freshToken = await _authService.refreshToken();
+      if (freshToken != null) {
+        response = await http.delete(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $freshToken',
+          },
+        );
+      }
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return true;
