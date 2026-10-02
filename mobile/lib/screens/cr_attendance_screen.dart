@@ -692,6 +692,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
     showDialog(
       context: context,
       builder: (dCtx) => AlertDialog(
+        scrollable: true,
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
@@ -701,31 +702,34 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
             Text('Add Section Mate', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: idCtrl,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Student Roll ID',
-                hintText: 'e.g. 2241081055',
-                prefixIcon: const Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: idCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Student Roll ID',
+                  hintText: 'e.g. 2241081055',
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: nameCtrl,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                hintText: 'e.g. Shakib Ahmed',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  hintText: 'e.g. Shakib Ahmed',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -969,42 +973,52 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
     showDialog(
       context: context,
       builder: (dCtx) => AlertDialog(
+        scrollable: true,
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Select Course for Attendance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (todaySlots.isNotEmpty) ...[
-              const Text('Today\'s Classes:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              ...todaySlots.map((slot) => ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.school_outlined, color: AppColors.primarySky),
-                    title: Text(slot.courseCode, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                    subtitle: Text(slot.courseTitle, style: const TextStyle(fontSize: 11)),
-                    onTap: () {
-                      setState(() {
-                        _selectedCourseCode = slot.courseCode;
-                        _selectedCourseTitle = slot.courseTitle;
-                      });
-                      Navigator.pop(dCtx);
-                    },
-                  )),
-              const Divider(),
-            ],
-            const SizedBox(height: 6),
-            TextField(
-              controller: ctrl,
-              decoration: InputDecoration(
-                labelText: 'Custom Course Code',
-                hintText: 'e.g. SWE-321',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (todaySlots.isNotEmpty) ...[
+                const Text('Today\'s Classes:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                ...todaySlots.map((slot) => ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      leading: const Icon(Icons.school_outlined, color: AppColors.primarySky, size: 20),
+                      title: Text(slot.courseCode, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      subtitle: Text(slot.courseTitle, style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      onTap: () {
+                        setState(() {
+                          _selectedCourseCode = slot.courseCode;
+                          _selectedCourseTitle = slot.courseTitle;
+                        });
+                        Navigator.pop(dCtx);
+                      },
+                    )),
+                const Divider(),
+              ],
+              const SizedBox(height: 6),
+              TextField(
+                controller: ctrl,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Custom Course Code',
+                  hintText: 'e.g. SWE-321',
+                  prefixIcon: const Icon(Icons.edit_note_rounded, color: AppColors.primarySky, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1015,6 +1029,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primarySky,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
