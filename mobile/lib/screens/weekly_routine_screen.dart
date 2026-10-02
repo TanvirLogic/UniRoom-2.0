@@ -57,24 +57,31 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
                 // Cohort Indicator Pill
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        user?.isFaculty == true
-                            ? 'Faculty Routine: ${user?.facultyId ?? "N/A"}'
-                            : '${user?.departmentName ?? "CSE"} • Batch ${user?.batch ?? "68"} • Sec ${user?.section ?? "A"}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primarySky,
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            user?.isFaculty == true
+                                ? 'Faculty: ${user?.facultyId ?? "N/A"}'
+                                : '${user?.effectiveDepartmentCode ?? user?.departmentName ?? "SWE"} • Batch ${user?.batch ?? "68"} • Sec ${user?.section ?? "B"}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primarySky,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       '${filteredSlots.length} class${filteredSlots.length == 1 ? "" : "es"}',
                       style: const TextStyle(

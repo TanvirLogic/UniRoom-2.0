@@ -759,4 +759,128 @@ export class AuthService {
       expiresIn: this.accessExpiresIn,
     };
   }
+
+  /// Get all registered classmates in the caller's cohort (department, batch, section)
+  async getSectionStudents(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        departmentId: true,
+        batch: true,
+        section: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.departmentId || !user.batch || !user.section) {
+      return [];
+    }
+
+    const students = await this.prisma.user.findMany({
+      where: {
+        departmentId: user.departmentId,
+        batch: user.batch,
+        section: user.section,
+        role: { in: [Role.STUDENT, Role.CR] },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        studentId: true,
+        email: true,
+        role: true,
+        batch: true,
+        section: true,
+      },
+      orderBy: [
+        { studentId: 'asc' },
+        { fullName: 'asc' },
+      ],
+    });
+
+    return students;
+  }
+
+  /// CR or Admin quick-adds a classmate to the section roster
+  async addSectionStudent(
+    userId: string,
+    dto: { studentId: string; fullName: string; email?: string },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.departmentId || !user.batch || !user.section) {
+      throw new BadRequestException('Caller must be assigned to a department, batch, and section');
+    }
+
+    const cleanStudentId = dto.studentId.trim();
+    const cleanFullName = dto.fullName.trim();
+    const cleanEmail =
+      dto.email?.trim().toLowerCase() ||
+      `${cleanStudentId.toLowerCase()}@uttara.edu.bd`;
+
+    // Check if studentId already exists in this university
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { studentId: cleanStudentId, universityId: user.universityId },
+          { email: cleanEmail },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      return this.prisma.user.update({
+        where: { id: existingUser.id },
+        data: {
+          fullName: cleanFullName,
+          departmentId: user.departmentId,
+          batch: user.batch,
+          section: user.section,
+          studentId: cleanStudentId,
+        },
+        select: {
+          id: true,
+          fullName: true,
+          studentId: true,
+          email: true,
+          role: true,
+          batch: true,
+          section: true,
+        },
+      });
+    }
+
+    const defaultPasswordHash = await bcrypt.hash('Password123!', this.saltRounds);
+
+    return this.prisma.user.create({
+      data: {
+        universityId: user.universityId,
+        departmentId: user.departmentId,
+        batch: user.batch,
+        section: user.section,
+        fullName: cleanFullName,
+        studentId: cleanStudentId,
+        email: cleanEmail,
+        passwordHash: defaultPasswordHash,
+        role: Role.STUDENT,
+        isEmailVerified: true,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        studentId: true,
+        email: true,
+        role: true,
+        batch: true,
+        section: true,
+      },
+    });
+  }
 }

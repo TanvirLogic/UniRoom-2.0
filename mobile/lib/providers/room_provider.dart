@@ -174,7 +174,11 @@ class RoomProvider extends ChangeNotifier {
         note: note,
       );
 
-      // Refresh room lists
+      // Immediately remove booked room from in-memory list for instant UI disappearance
+      _freeRooms.removeWhere((r) => r.id == roomId || r.roomNumber == roomId);
+      notifyListeners();
+
+      // Refresh room lists from server
       await loadFreeRoomsNow();
       return true;
     } catch (e) {

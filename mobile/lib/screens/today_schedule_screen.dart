@@ -5,6 +5,7 @@ import '../models/schedule_slot_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../services/schedule_service.dart';
+import 'free_rooms_screen.dart';
 
 class TodayScheduleScreen extends StatefulWidget {
   final VoidCallback? onNavigateToWeekly;
@@ -43,6 +44,16 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       appBar: AppBar(
         title: const Text('Today\'s Schedule'),
         actions: [
+          IconButton(
+            tooltip: 'Free Rooms',
+            icon: const Icon(Icons.door_front_door_outlined, color: AppColors.textSecondary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FreeRoomsScreen()),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Refresh',
             icon: Icon(

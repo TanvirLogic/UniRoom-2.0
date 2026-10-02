@@ -676,9 +676,9 @@ export class RoomsService {
     const durationMinutes = dto.durationMinutes || 60;
     const reqEnd = this.addMinutesToTime(reqStart, durationMinutes);
 
-    // 3. Query all candidate rooms for this department/university
+    // 3. Query all candidate rooms for this department/university (strictly AVAILABLE rooms only)
     const roomWhere: Prisma.RoomWhereInput = {
-      currentStatus: { not: RoomStatus.MAINTENANCE },
+      currentStatus: RoomStatus.AVAILABLE,
     };
 
     if (targetDepartmentId) {
@@ -743,13 +743,12 @@ export class RoomsService {
     }> = [];
 
     for (const room of candidateRooms) {
-      // Check live reservation lease
+      // Check live reservation lease or active occupation
       if (
-        room.currentStatus === RoomStatus.RESERVED &&
-        room.leaseExpiresAt &&
-        room.leaseExpiresAt > now
+        room.currentStatus !== RoomStatus.AVAILABLE ||
+        (room.leaseExpiresAt && room.leaseExpiresAt > now)
       ) {
-        continue; // Active lease held by another user
+        continue; // Active lease held by another user or class currently running!
       }
 
       // Check timetable overlap

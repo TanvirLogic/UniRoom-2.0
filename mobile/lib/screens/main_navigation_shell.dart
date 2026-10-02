@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import 'today_schedule_screen.dart';
 import 'weekly_routine_screen.dart';
 import 'cr_command_screen.dart';
+import 'cr_attendance_screen.dart';
 import 'free_rooms_screen.dart';
 import 'faculty_schedule_screen.dart';
 import 'cohort_profile_screen.dart';
@@ -101,9 +102,10 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     final List<NavigationDestination> destinations;
 
     if (isCr) {
-      // CR View: Today Schedule, CR Command, Weekly Routine, Free Rooms, Profile
+      // CR View: Today Schedule, Attendance, CR Action, Weekly Routine, Free Rooms, Profile
       pages = [
-        TodayScheduleScreen(onNavigateToWeekly: () => _switchTab(2)),
+        TodayScheduleScreen(onNavigateToWeekly: () => _switchTab(3)),
+        const CrAttendanceScreen(),
         const CrCommandScreen(),
         const WeeklyRoutineScreen(),
         const FreeRoomsScreen(),
@@ -117,9 +119,14 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           label: 'Today',
         ),
         NavigationDestination(
+          icon: Icon(Icons.checklist_rtl_outlined),
+          selectedIcon: Icon(Icons.checklist_rtl_rounded),
+          label: 'Attendance',
+        ),
+        NavigationDestination(
           icon: Icon(Icons.flash_on_outlined),
           selectedIcon: Icon(Icons.flash_on_rounded),
-          label: 'CR Action',
+          label: 'Action',
         ),
         NavigationDestination(
           icon: Icon(Icons.calendar_month_outlined),
@@ -129,7 +136,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         NavigationDestination(
           icon: Icon(Icons.door_front_door_outlined),
           selectedIcon: Icon(Icons.door_front_door_rounded),
-          label: 'Free Rooms',
+          label: 'Rooms',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
@@ -191,7 +198,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         NavigationDestination(
           icon: Icon(Icons.door_front_door_outlined),
           selectedIcon: Icon(Icons.door_front_door_rounded),
-          label: 'Free Rooms',
+          label: 'Rooms',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
@@ -223,13 +230,39 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             ),
           ],
         ),
-        child: NavigationBar(
-          selectedIndex: safeIndex,
-          onDestinationSelected: _switchTab,
-          destinations: destinations,
-          backgroundColor: AppColors.surface,
-          indicatorColor: AppColors.primaryLight,
-          elevation: 0,
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            height: 60,
+            indicatorColor: AppColors.primarySky.withValues(alpha: 0.12),
+            indicatorShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final isSelected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? AppColors.primarySky : AppColors.textSecondary,
+                letterSpacing: -0.2,
+              );
+            }),
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              final isSelected = states.contains(WidgetState.selected);
+              return IconThemeData(
+                size: 20,
+                color: isSelected ? AppColors.primarySky : AppColors.textSecondary,
+              );
+            }),
+          ),
+          child: NavigationBar(
+            height: 60,
+            selectedIndex: safeIndex,
+            onDestinationSelected: _switchTab,
+            destinations: destinations,
+            backgroundColor: AppColors.surface,
+            elevation: 0,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          ),
         ),
       ),
     );

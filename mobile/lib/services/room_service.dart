@@ -97,6 +97,7 @@ class RoomService {
           .whereType<Map<String, dynamic>>()
           .map((item) => RoomModel.fromJson(item))
           .where((r) => r.id.isNotEmpty || r.roomNumber.isNotEmpty)
+          .where((r) => r.currentStatus == 'AVAILABLE')
           .toList();
     } else {
       // Fallback to getRooms with status=AVAILABLE if free-now endpoint requires specific parameters

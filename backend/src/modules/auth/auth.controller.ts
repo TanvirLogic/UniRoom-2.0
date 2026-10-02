@@ -135,6 +135,28 @@ export class AuthController {
     return this.authService.updateProfile(userId, dto);
   }
 
+  @Get('section-students')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all students enrolled in the caller\'s department, batch, and section' })
+  @ApiResponse({ status: 200, description: 'List of section classmates' })
+  async getSectionStudents(@CurrentUser('sub') userId: string) {
+    return this.authService.getSectionStudents(userId);
+  }
+
+  @Post('section-students')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CR, Role.SUPER_ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'CR or Admin quick-adds a student to their section roster' })
+  @ApiResponse({ status: 201, description: 'Classmate added or updated in section roster' })
+  async addSectionStudent(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: { studentId: string; fullName: string; email?: string },
+  ) {
+    return this.authService.addSectionStudent(userId, dto);
+  }
+
   @Get('admin-test')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)

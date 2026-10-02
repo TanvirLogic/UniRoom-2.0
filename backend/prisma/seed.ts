@@ -261,6 +261,45 @@ async function main() {
     },
   });
 
+  // Additional Section B Classmates Roster
+  const secBClassmates = [
+    { studentId: '2241081003', fullName: 'Tanvir Hasan' },
+    { studentId: '2241081005', fullName: 'Md. Abdullah' },
+    { studentId: '2241081008', fullName: 'Sumaiya Akter' },
+    { studentId: '2241081011', fullName: 'Fahim Shahriar' },
+    { studentId: '2241081014', fullName: 'Mehedi Hasan' },
+    { studentId: '2241081018', fullName: 'Nusrat Jahan' },
+    { studentId: '2241081021', fullName: 'Mahir Faysal' },
+    { studentId: '2241081025', fullName: 'Ayesha Siddika' },
+    { studentId: '2241081029', fullName: 'Sakib Al Hasan' },
+    { studentId: '2241081033', fullName: 'Sadia Islam' },
+    { studentId: '2241081037', fullName: 'Rayhan Ahmed' },
+    { studentId: '2241081042', fullName: 'Rifat Hossain' },
+    { studentId: '2241081046', fullName: 'Farzana Haque' },
+    { studentId: '2241081055', fullName: 'Naimul Islam' },
+    { studentId: '2241081058', fullName: 'Tamanna Rahman' },
+    { studentId: '2241081062', fullName: 'Shahriar Kabir' },
+    { studentId: '2241081066', fullName: 'Jannatul Ferdous' },
+    { studentId: '2241081070', fullName: 'Ashiqur Rahman' },
+  ];
+
+  for (const c of secBClassmates) {
+    await prisma.user.create({
+      data: {
+        universityId: university.id,
+        departmentId: sweDept.id,
+        fullName: c.fullName,
+        email: `${c.studentId}@uttara.edu.bd`,
+        passwordHash,
+        role: Role.STUDENT,
+        studentId: c.studentId,
+        batch: '68',
+        section: 'B',
+        isEmailVerified: true,
+      },
+    });
+  }
+
   // Super Admin User
   const superAdmin = await prisma.user.create({
     data: {

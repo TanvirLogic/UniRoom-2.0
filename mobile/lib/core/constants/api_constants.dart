@@ -19,8 +19,8 @@ class ApiConstants {
     if (_envApiUrl.isNotEmpty) {
       return _envApiUrl;
     }
-    if (cloudBaseUrl != null && cloudBaseUrl!.isNotEmpty) {
-      return cloudBaseUrl!;
+    if (cloudBaseUrl.isNotEmpty) {
+      return cloudBaseUrl;
     }
     if (kIsWeb) {
       return 'http://localhost:$port/api/v1';
@@ -42,6 +42,7 @@ class ApiConstants {
   static String get resetPassword => '$baseUrl/auth/reset-password';
   static String get me => '$baseUrl/auth/me';
   static String get profile => '$baseUrl/auth/profile';
+  static String get sectionStudents => '$baseUrl/auth/section-students';
 
   // Metadata Endpoints
   static String get registrationOptions => '$baseUrl/meta/registration-options';

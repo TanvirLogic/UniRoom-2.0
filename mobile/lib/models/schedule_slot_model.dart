@@ -57,6 +57,8 @@ class ScheduleSlotModel {
     this.overrideAction,
   });
 
+  String get courseTitle => courseName;
+
   factory ScheduleSlotModel.fromJson(Map<String, dynamic> json) {
     String? rNumber;
     String? bName;
