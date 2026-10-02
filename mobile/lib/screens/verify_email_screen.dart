@@ -130,7 +130,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.sizeOf(context).width < 380 ? 16 : 24,
+              vertical: 20,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -255,79 +258,87 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final text = _pinController.text;
     final hasFocus = _pinFocusNode.hasFocus;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(6, (index) {
-            final isFilled = index < text.length;
-            final isCurrent = hasFocus && (index == text.length || (index == 5 && text.length == 6));
-            final digit = isFilled ? text[index] : '';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        final boxWidth = ((totalWidth - 30) / 6).clamp(36.0, 48.0);
+        final boxHeight = boxWidth * 1.16;
 
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 48,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isFilled
-                    ? AppColors.primaryLight.withValues(alpha: 0.35)
-                    : AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isCurrent
-                      ? AppColors.primarySky
-                      : (isFilled ? AppColors.primarySky.withValues(alpha: 0.6) : AppColors.border),
-                  width: isCurrent ? 2.0 : 1.2,
-                ),
-                boxShadow: isCurrent
-                    ? [
-                        BoxShadow(
-                          color: AppColors.primarySky.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ]
-                    : null,
-              ),
-              child: Text(
-                digit,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            );
-          }),
-        ),
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(6, (index) {
+                final isFilled = index < text.length;
+                final isCurrent = hasFocus && (index == text.length || (index == 5 && text.length == 6));
+                final digit = isFilled ? text[index] : '';
 
-        // Invisible touch-receiving text input
-        Positioned.fill(
-          child: Opacity(
-            opacity: 0.01,
-            child: TextField(
-              controller: _pinController,
-              focusNode: _pinFocusNode,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              autofocus: false,
-              enableInteractiveSelection: false,
-              decoration: const InputDecoration(
-                counterText: '',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                fillColor: Colors.transparent,
-              ),
-              onChanged: (_) {
-                setState(() {});
-              },
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: boxWidth,
+                  height: boxHeight,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isFilled
+                        ? AppColors.primaryLight.withValues(alpha: 0.35)
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isCurrent
+                          ? AppColors.primarySky
+                          : (isFilled ? AppColors.primarySky.withValues(alpha: 0.6) : AppColors.border),
+                      width: isCurrent ? 2.0 : 1.2,
+                    ),
+                    boxShadow: isCurrent
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primarySky.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    digit,
+                    style: TextStyle(
+                      fontSize: boxWidth < 42 ? 18 : 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                );
+              }),
             ),
-          ),
-        ),
-      ],
+
+            // Invisible touch-receiving text input
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.01,
+                child: TextField(
+                  controller: _pinController,
+                  focusNode: _pinFocusNode,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  autofocus: false,
+                  enableInteractiveSelection: false,
+                  decoration: const InputDecoration(
+                    counterText: '',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    fillColor: Colors.transparent,
+                  ),
+                  onChanged: (_) {
+                    setState(() {});
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

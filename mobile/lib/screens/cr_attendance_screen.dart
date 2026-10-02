@@ -881,22 +881,26 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primarySky.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$dept • Batch $batch ($section)',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primarySky,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySky.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$dept • Batch $batch ($section)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primarySky,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               // Tappable Date Picker Chip
               InkWell(
                 onTap: _pickDate,
@@ -1340,7 +1344,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
                 ),
               ],
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: MediaQuery.sizeOf(context).width < 380 ? 10 : 16),
 
             // Save & Copy SMS Button
             Expanded(
@@ -1353,10 +1357,18 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  icon: const Icon(Icons.send_to_mobile_rounded, size: 20),
-                  label: const Text(
-                    'Save & Copy SMS',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  icon: Icon(
+                    Icons.send_to_mobile_rounded,
+                    size: MediaQuery.sizeOf(context).width < 380 ? 17 : 20,
+                  ),
+                  label: Text(
+                    MediaQuery.sizeOf(context).width < 380 ? 'Copy SMS' : 'Save & Copy SMS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: MediaQuery.sizeOf(context).width < 380 ? 13 : 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   onPressed: _students.isEmpty ? null : _saveAndShowSmsModal,
                 ),

@@ -132,7 +132,10 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
 
           // Count Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+              vertical: 4,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -140,12 +143,22 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
                   '${filtered.length} Available Room${filtered.length == 1 ? "" : "s"}',
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                 ),
-                const Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
-                    SizedBox(width: 4),
-                    Text('Free for study / extra class', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                  ],
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          MediaQuery.sizeOf(context).width < 380 ? 'Free for study' : 'Free for study / extra class',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -162,7 +175,12 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
                         color: AppColors.primarySky,
                         onRefresh: () => roomProv.loadFreeRoomsNow(),
                         child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                          padding: EdgeInsets.fromLTRB(
+                            MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+                            8,
+                            MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+                            24,
+                          ),
                           itemCount: filtered.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
@@ -177,8 +195,9 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
   }
 
   Widget _buildFreeRoomCard(RoomModel room) {
+    final isCompact = MediaQuery.sizeOf(context).width < 380;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isCompact ? 14 : 18),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -189,14 +208,14 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(isCompact ? 10 : 12),
             decoration: BoxDecoration(
               color: const Color(0xFFDCFCE7),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.door_front_door_rounded, color: AppColors.success, size: 28),
+            child: Icon(Icons.door_front_door_rounded, color: AppColors.success, size: isCompact ? 24 : 28),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isCompact ? 12 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,10 +223,19 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      room.roomNumber,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                    Expanded(
+                      child: Text(
+                        room.roomNumber,
+                        style: TextStyle(
+                          fontSize: isCompact ? 16 : 17,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -258,7 +286,10 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.bolt_rounded, size: 16, color: AppColors.primarySky),
-                      label: const Text('Book for My Section Class', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      label: Text(
+                        isCompact ? 'Book for My Section' : 'Book for My Section Class',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primarySky,
                         side: const BorderSide(color: AppColors.primarySky),

@@ -49,7 +49,12 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
         children: [
           // Cohort Sub-header & Search Bar Container
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+            padding: EdgeInsets.fromLTRB(
+              MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+              0,
+              MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+              14,
+            ),
             color: AppColors.background,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -136,7 +141,9 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
             height: 48,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+              ),
               itemCount: _days.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
@@ -162,7 +169,10 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   showCheckmark: false,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.sizeOf(context).width < 380 ? 10 : 14,
+                    vertical: 8,
+                  ),
                 );
               },
             ),
@@ -179,7 +189,12 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
                         color: AppColors.primarySky,
                         onRefresh: () => schedule.loadSchedules(),
                         child: ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                          padding: EdgeInsets.fromLTRB(
+                            MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+                            8,
+                            MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+                            24,
+                          ),
                           itemCount: filteredSlots.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
@@ -195,7 +210,7 @@ class _WeeklyRoutineScreenState extends State<WeeklyRoutineScreen> {
 
   Widget _buildRoutineCard(ScheduleSlotModel slot) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 14 : 18),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),

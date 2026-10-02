@@ -311,7 +311,10 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
         title: const Text('My Profile & Cohort'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+          vertical: 12,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -327,7 +330,11 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
             ElevatedButton.icon(
               onPressed: () => _openEditCohortSheet(context, user),
               icon: const Icon(Icons.tune_rounded, size: 18),
-              label: const Text('Edit Cohort (Section, Batch, Dept)'),
+              label: Text(
+                MediaQuery.sizeOf(context).width < 380
+                    ? 'Edit Academic Cohort'
+                    : 'Edit Cohort (Section, Batch, Dept)',
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primarySky,
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -344,7 +351,12 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
             OutlinedButton.icon(
               onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout_rounded, size: 18, color: AppColors.error),
-              label: const Text('Sign Out from UniRoom-Live', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w700)),
+              label: Text(
+                MediaQuery.sizeOf(context).width < 380
+                    ? 'Sign Out'
+                    : 'Sign Out from UniRoom-Live',
+                style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w700),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.error, width: 1.2),
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -360,7 +372,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
 
   Widget _buildProfileHero(dynamic user) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 16 : 22),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
@@ -418,7 +430,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
 
   Widget _buildCohortCard(dynamic user) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 16 : 20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),

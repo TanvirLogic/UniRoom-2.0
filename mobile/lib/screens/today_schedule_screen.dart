@@ -71,7 +71,10 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
         onRefresh: () => schedule.loadSchedules(),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+            vertical: 12,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -278,13 +281,17 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
               Expanded(
                 child: Row(
                   children: [
-                    Text(
-                      slot.effectiveRoomNumber,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
+                    Flexible(
+                      child: Text(
+                        slot.effectiveRoomNumber,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (slot.isRescheduled) ...[
@@ -396,35 +403,41 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          slot.effectiveRoomNumber,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        if (slot.isRescheduled) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              slot.effectiveRoomNumber,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            child: const Text(
-                              'SHIFTED',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFFD97706),
+                          ),
+                          if (slot.isRescheduled) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'SHIFTED',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFFD97706),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     Text(
                       '${slot.effectiveStartTime} - ${slot.effectiveEndTime}',
@@ -512,7 +525,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             children: [
               // Time Column
               SizedBox(
-                width: 82,
+                width: MediaQuery.sizeOf(context).width < 380 ? 70 : 82,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

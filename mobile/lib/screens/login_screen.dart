@@ -87,7 +87,10 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.sizeOf(context).width < 380 ? 18 : 24,
+              vertical: 20,
+            ),
             child: Form(
               key: _formKey,
               child: Column(

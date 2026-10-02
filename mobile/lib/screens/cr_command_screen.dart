@@ -758,7 +758,10 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
         color: AppColors.primarySky,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+            vertical: 12,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -912,34 +915,38 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isCancelled
-                      ? const Color(0xFFFEE2E2)
-                      : (isRescheduled
-                          ? const Color(0xFFFEF3C7)
-                          : (isLive
-                              ? const Color(0xFFDCFCE7)
-                              : (isDone ? AppColors.surfaceVariant : AppColors.primaryLight))),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  isCancelled
-                      ? 'CANCELLED TODAY'
-                      : (isRescheduled
-                          ? 'RESCHEDULED (TODAY ONLY)'
-                          : (isLive ? 'RUNNING NOW' : (isDone ? 'COMPLETED (TIME PASSED)' : 'SCHEDULED'))),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
                     color: isCancelled
-                        ? AppColors.error
+                        ? const Color(0xFFFEE2E2)
                         : (isRescheduled
-                            ? const Color(0xFFD97706)
+                            ? const Color(0xFFFEF3C7)
                             : (isLive
-                                ? AppColors.success
-                                : (isDone ? AppColors.textMuted : AppColors.primarySky))),
+                                ? const Color(0xFFDCFCE7)
+                                : (isDone ? AppColors.surfaceVariant : AppColors.primaryLight))),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isCancelled
+                        ? 'CANCELLED'
+                        : (isRescheduled
+                            ? 'RESCHEDULED'
+                            : (isLive ? 'RUNNING' : (isDone ? 'COMPLETED' : 'SCHEDULED'))),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: isCancelled
+                          ? AppColors.error
+                          : (isRescheduled
+                              ? const Color(0xFFD97706)
+                              : (isLive
+                                  ? AppColors.success
+                                  : (isDone ? AppColors.textMuted : AppColors.primarySky))),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -1114,7 +1121,10 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => _showCancelClassSheet(context, slot),
                     icon: const Icon(Icons.cancel_outlined, size: 15, color: AppColors.error),
-                    label: const Text('Cancel Today', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                    label: Text(
+                      MediaQuery.sizeOf(context).width < 380 ? 'Cancel' : 'Cancel Today',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.error,
                       side: const BorderSide(color: Color(0xFFFCA5A5)),
@@ -1133,7 +1143,7 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
                     label: Text(
                       isRescheduled
                           ? 'Edit Time'
-                          : (isDone ? 'Reschedule (Delayed)' : 'Change Time'),
+                          : (isDone ? 'Reschedule' : 'Change Time'),
                       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                     ),
                     style: ElevatedButton.styleFrom(

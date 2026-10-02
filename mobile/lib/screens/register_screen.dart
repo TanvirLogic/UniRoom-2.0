@@ -229,7 +229,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: MediaQuery.sizeOf(context).width < 380 ? 16 : 24,
+            vertical: 16,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -261,7 +264,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(
                     children: [
                       _buildRoleTab('STUDENT', 'Student'),
-                      _buildRoleTab('CR', 'CR (Class Rep)'),
+                      _buildRoleTab(
+                        'CR',
+                        MediaQuery.sizeOf(context).width < 380 ? 'CR (Rep)' : 'CR (Class Rep)',
+                      ),
                       _buildRoleTab('FACULTY', 'Faculty'),
                     ],
                   ),
@@ -555,6 +561,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,

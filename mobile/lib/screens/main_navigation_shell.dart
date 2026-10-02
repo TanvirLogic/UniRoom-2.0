@@ -101,6 +101,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     final List<Widget> pages;
     final List<NavigationDestination> destinations;
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 380;
+
     if (isCr) {
       // CR View: Today Schedule, Attendance, CR Action, Weekly Routine, Free Rooms, Profile
       pages = [
@@ -112,33 +115,33 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         const CohortProfileScreen(),
       ];
 
-      destinations = const [
-        NavigationDestination(
+      destinations = [
+        const NavigationDestination(
           icon: Icon(Icons.today_outlined),
           selectedIcon: Icon(Icons.today_rounded),
           label: 'Today',
         ),
         NavigationDestination(
-          icon: Icon(Icons.checklist_rtl_outlined),
-          selectedIcon: Icon(Icons.checklist_rtl_rounded),
-          label: 'Attendance',
+          icon: const Icon(Icons.checklist_rtl_outlined),
+          selectedIcon: const Icon(Icons.checklist_rtl_rounded),
+          label: isCompact ? 'Attend' : 'Attendance',
         ),
-        NavigationDestination(
+        const NavigationDestination(
           icon: Icon(Icons.flash_on_outlined),
           selectedIcon: Icon(Icons.flash_on_rounded),
           label: 'Action',
         ),
-        NavigationDestination(
+        const NavigationDestination(
           icon: Icon(Icons.calendar_month_outlined),
           selectedIcon: Icon(Icons.calendar_month_rounded),
           label: 'Routine',
         ),
-        NavigationDestination(
+        const NavigationDestination(
           icon: Icon(Icons.door_front_door_outlined),
           selectedIcon: Icon(Icons.door_front_door_rounded),
           label: 'Rooms',
         ),
-        NavigationDestination(
+        const NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
           selectedIcon: Icon(Icons.person_rounded),
           label: 'Profile',
@@ -240,16 +243,16 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             labelTextStyle: WidgetStateProperty.resolveWith((states) {
               final isSelected = states.contains(WidgetState.selected);
               return TextStyle(
-                fontSize: 10,
+                fontSize: isCompact ? 9.5 : 10.0,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                 color: isSelected ? AppColors.primarySky : AppColors.textSecondary,
-                letterSpacing: -0.2,
+                letterSpacing: isCompact ? -0.4 : -0.2,
               );
             }),
             iconTheme: WidgetStateProperty.resolveWith((states) {
               final isSelected = states.contains(WidgetState.selected);
               return IconThemeData(
-                size: 20,
+                size: isCompact ? 19 : 20,
                 color: isSelected ? AppColors.primarySky : AppColors.textSecondary,
               );
             }),

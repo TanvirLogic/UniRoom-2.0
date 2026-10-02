@@ -57,7 +57,10 @@ class _FacultyScheduleScreenState extends State<FacultyScheduleScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 380 ? 14 : 20,
+          vertical: 12,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -266,10 +269,15 @@ class _FacultyScheduleScreenState extends State<FacultyScheduleScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${slot.courseCode} • ${slot.courseName}',
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  '${slot.courseCode} • ${slot.courseName}',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -291,7 +299,7 @@ class _FacultyScheduleScreenState extends State<FacultyScheduleScreen> {
   Widget _buildFacultySlotCard(ScheduleSlotModel slot) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 14 : 18),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -342,9 +350,13 @@ class _FacultyScheduleScreenState extends State<FacultyScheduleScreen> {
             children: [
               const Icon(Icons.meeting_room_outlined, size: 16, color: AppColors.primarySky),
               const SizedBox(width: 6),
-              Text(
-                '${slot.roomNumber ?? "Room TBA"} • Floor ${slot.floor ?? "N/A"}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              Flexible(
+                child: Text(
+                  '${slot.roomNumber ?? "Room TBA"} • Floor ${slot.floor ?? "N/A"}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
