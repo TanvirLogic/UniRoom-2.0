@@ -15,6 +15,7 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private readonly emailFrom: string;
   private readonly resendApiKey: string | null = null;
+  private readonly brevoApiKey: string | null = null;
 
   private readonly host: string;
   private readonly port: number;
@@ -22,6 +23,7 @@ export class EmailService {
   private readonly user: string;
 
   constructor(private readonly configService: ConfigService) {
+    this.brevoApiKey = this.configService.get<string>('BREVO_API_KEY', '').trim() || null;
     this.resendApiKey = this.configService.get<string>('RESEND_API_KEY', '').trim() || null;
     this.host = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
     this.port = Number(this.configService.get<number>('SMTP_PORT', 465));
@@ -33,6 +35,10 @@ export class EmailService {
     this.user = rawUser.replace(/["']/g, '').trim();
     const pass = rawPass.replace(/["'\s]/g, '').trim();
     this.emailFrom = this.configService.get<string>('EMAIL_FROM', 'UniRoom-Live <no-reply@uniroom.live>');
+
+    if (this.brevoApiKey) {
+      this.logger.log('[EmailService] Configured Brevo HTTP API for production email dispatch (Port 443 HTTPS).');
+    }
 
     if (this.resendApiKey) {
       this.logger.log('[EmailService] Configured Resend HTTP API for production email dispatch (Port 443 HTTPS).');
@@ -63,6 +69,42 @@ export class EmailService {
       this.logger.warn(
         '[EmailService] No active email provider (neither RESEND_API_KEY nor SMTP credentials). Verification PINs will be printed to server console.',
       );
+    }
+  }
+
+  private async sendViaBrevo(
+    to: string,
+    fullName: string,
+    subject: string,
+    html: string,
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    if (!this.brevoApiKey) return { success: false, error: 'No Brevo API Key configured' };
+    try {
+      const senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || this.user || 'bmwthriad2023@gmail.com';
+      const senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'UniRoom-Live 2.0';
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': this.brevoApiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: to, name: fullName || to }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+
+      const data: any = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || `Brevo returned HTTP ${response.status}`);
+      }
+      return { success: true, messageId: data.messageId };
+    } catch (err: any) {
+      return { success: false, error: err.message };
     }
   }
 
@@ -102,9 +144,10 @@ export class EmailService {
    * Get current email service status and masked telemetry
    */
   getStatus() {
-    const isSmtpConfigured = !!(this.transporter && this.user);
+    const isBrevoConfigured = !!this.brevoApiKey;
     const isResendConfigured = !!this.resendApiKey;
-    const isConfigured = isResendConfigured || isSmtpConfigured;
+    const isSmtpConfigured = !!(this.transporter && this.user);
+    const isConfigured = isBrevoConfigured || isResendConfigured || isSmtpConfigured;
 
     const maskedUser = this.user
       ? this.user.includes('@')
@@ -114,7 +157,13 @@ export class EmailService {
 
     return {
       isConfigured,
-      provider: isResendConfigured ? 'resend-http' : isSmtpConfigured ? 'smtp' : 'none',
+      provider: isBrevoConfigured
+        ? 'brevo-http'
+        : isResendConfigured
+        ? 'resend-http'
+        : isSmtpConfigured
+        ? 'smtp'
+        : 'none',
       host: this.host,
       port: this.port,
       secure: this.secure,
@@ -124,9 +173,16 @@ export class EmailService {
   }
 
   /**
-   * Verify SMTP connection or Resend credentials
+   * Verify SMTP connection or HTTP API credentials
    */
   async verifyConnection(): Promise<{ success: boolean; message: string }> {
+    if (this.brevoApiKey) {
+      return {
+        success: true,
+        message: 'Brevo HTTP API key is configured and ready for outbound HTTPS dispatch (Port 443).',
+      };
+    }
+
     if (this.resendApiKey) {
       return {
         success: true,
@@ -137,7 +193,7 @@ export class EmailService {
     if (!this.transporter) {
       return {
         success: false,
-        message: 'No email credentials found (neither RESEND_API_KEY nor SMTP_USER/SMTP_PASS).',
+        message: 'No email credentials found (neither BREVO_API_KEY, RESEND_API_KEY nor SMTP credentials).',
       };
     }
 
@@ -151,7 +207,7 @@ export class EmailService {
       this.logger.error(`[EmailService] SMTP verification failed: ${error.message}`);
       return {
         success: false,
-        message: `SMTP connection failed (${error.message}). Tip: On Render Free tier, configure RESEND_API_KEY to send emails over HTTPS.`,
+        message: `SMTP connection failed (${error.message}). Tip: On Render Free tier, configure BREVO_API_KEY or RESEND_API_KEY to send emails over HTTPS.`,
       };
     }
   }
@@ -171,6 +227,17 @@ export class EmailService {
         </div>
       </div>
     `;
+
+    if (this.brevoApiKey) {
+      const brevoRes = await this.sendViaBrevo(to, 'Test User', subject, html);
+      if (brevoRes.success) {
+        return {
+          success: true,
+          message: `Test email dispatched successfully via Brevo API to ${to}!`,
+          messageId: brevoRes.messageId,
+        };
+      }
+    }
 
     if (this.resendApiKey) {
       const resendRes = await this.sendViaResend(to, subject, html);
@@ -199,14 +266,14 @@ export class EmailService {
       } catch (error: any) {
         return {
           success: false,
-          message: `SMTP delivery failed (${error.message}). Tip: On Render Free tier, set RESEND_API_KEY in Render environment.`,
+          message: `SMTP delivery failed (${error.message}). Tip: On Render Free tier, set BREVO_API_KEY or RESEND_API_KEY in Render environment.`,
         };
       }
     }
 
     return {
       success: false,
-      message: 'No email service configured. Please add RESEND_API_KEY or SMTP credentials.',
+      message: 'No email service configured. Please add BREVO_API_KEY, RESEND_API_KEY or SMTP credentials.',
     };
   }
 
@@ -214,7 +281,17 @@ export class EmailService {
     const subject = 'Your UniRoom-Live 2.0 Email Verification PIN';
     const html = this.buildVerificationTemplate(fullName, pin);
 
-    // 1. Try Resend HTTP API (Bypasses Render Free SMTP egress blocks)
+    // 1. Try Brevo HTTP API (Port 443 HTTPS - Works on Render Free Tier)
+    if (this.brevoApiKey) {
+      const brevoRes = await this.sendViaBrevo(to, fullName, subject, html);
+      if (brevoRes.success) {
+        this.logger.log(`[EmailService] Verification PIN sent to ${to} via Brevo (Id: ${brevoRes.messageId})`);
+        return { success: true, delivered: true, messageId: brevoRes.messageId };
+      }
+      this.logger.warn(`[EmailService] Brevo dispatch failed (${brevoRes.error}), attempting fallback...`);
+    }
+
+    // 2. Try Resend HTTP API (Port 443 HTTPS - Works on Render Free Tier)
     if (this.resendApiKey) {
       const resendRes = await this.sendViaResend(to, subject, html);
       if (resendRes.success) {
@@ -224,7 +301,7 @@ export class EmailService {
       this.logger.warn(`[EmailService] Resend dispatch failed (${resendRes.error}), falling back to SMTP...`);
     }
 
-    // 2. Try SMTP
+    // 3. Try SMTP
     if (this.transporter) {
       try {
         const info = await this.transporter.sendMail({
@@ -241,7 +318,7 @@ export class EmailService {
       }
     }
 
-    // 3. Resilient Fallback Logging
+    // 4. Resilient Fallback Logging
     this.logger.warn(
       `\n=======================================================\n[FALLBACK VERIFICATION PIN]\nTo: ${to} (${fullName})\nVerification PIN: [ ${pin} ]\nExpires in: 10 minutes\n=======================================================`,
     );
@@ -252,7 +329,17 @@ export class EmailService {
     const subject = 'Your UniRoom-Live 2.0 Password Reset PIN';
     const html = this.buildPasswordResetTemplate(fullName, pin);
 
-    // 1. Try Resend HTTP API
+    // 1. Try Brevo HTTP API
+    if (this.brevoApiKey) {
+      const brevoRes = await this.sendViaBrevo(to, fullName, subject, html);
+      if (brevoRes.success) {
+        this.logger.log(`[EmailService] Password reset PIN sent to ${to} via Brevo (Id: ${brevoRes.messageId})`);
+        return { success: true, delivered: true, messageId: brevoRes.messageId };
+      }
+      this.logger.warn(`[EmailService] Brevo dispatch failed (${brevoRes.error}), attempting fallback...`);
+    }
+
+    // 2. Try Resend HTTP API
     if (this.resendApiKey) {
       const resendRes = await this.sendViaResend(to, subject, html);
       if (resendRes.success) {
@@ -262,7 +349,7 @@ export class EmailService {
       this.logger.warn(`[EmailService] Resend dispatch failed (${resendRes.error}), falling back to SMTP...`);
     }
 
-    // 2. Try SMTP
+    // 3. Try SMTP
     if (this.transporter) {
       try {
         const info = await this.transporter.sendMail({
@@ -279,7 +366,7 @@ export class EmailService {
       }
     }
 
-    // 3. Resilient Fallback Logging
+    // 4. Resilient Fallback Logging
     this.logger.warn(
       `\n=======================================================\n[FALLBACK PASSWORD RESET PIN]\nTo: ${to} (${fullName})\nReset PIN: [ ${pin} ]\nExpires in: 10 minutes\n=======================================================`,
     );

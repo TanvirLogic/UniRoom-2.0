@@ -26,6 +26,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   void initState() {
     super.initState();
     _startTimer();
+    final auth = context.read<AuthProvider>();
+    if (auth.fallbackPin != null && auth.fallbackPin!.isNotEmpty) {
+      _pinController.text = auth.fallbackPin!;
+    }
     _pinFocusNode.addListener(() {
       if (mounted) setState(() {});
     });
@@ -174,7 +178,41 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     height: 1.5,
                   ),
                 ),
-                const SizedBox(height: 32),
+                if (auth.fallbackPin != null && auth.fallbackPin!.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 24),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Auto-Retrieved PIN (Cloud Port Blocked)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.amber),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Your verification code is: ${auth.fallbackPin}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 32),
+                ],
 
                 const Text(
                   'Enter 6-Digit PIN',

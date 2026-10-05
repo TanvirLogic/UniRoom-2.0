@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String? _pendingEmail; // Email stored during OTP verification or password reset
+  String? _fallbackPin; // Fallback PIN when cloud SMTP is firewalled on Free tier
 
   // Dynamic dropdown options (University -> Department -> Batch -> Section)
   RegistrationOptionsModel? _registrationOptions;
@@ -24,6 +25,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get pendingEmail => _pendingEmail;
+  String? get fallbackPin => _fallbackPin;
   bool get isAuthenticated => _user != null;
 
   RegistrationOptionsModel? get registrationOptions => _registrationOptions;
@@ -96,6 +98,7 @@ class AuthProvider extends ChangeNotifier {
       );
 
       _pendingEmail = res['email'] ?? email.trim().toLowerCase();
+      _fallbackPin = res['fallbackPin']?.toString();
       return true;
     } catch (e) {
       _setError(e.toString().replaceAll('Exception: ', ''));
@@ -124,6 +127,7 @@ class AuthProvider extends ChangeNotifier {
       if (res['user'] != null) {
         _user = UserModel.fromJson(res['user']);
         _pendingEmail = null;
+        _fallbackPin = null;
         return true;
       }
       return false;
@@ -143,7 +147,10 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      await _authService.resendVerificationPin(_pendingEmail!);
+      final res = await _authService.resendVerificationPin(_pendingEmail!);
+      if (res['fallbackPin'] != null) {
+        _fallbackPin = res['fallbackPin'].toString();
+      }
       return true;
     } catch (e) {
       _setError(e.toString().replaceAll('Exception: ', ''));
