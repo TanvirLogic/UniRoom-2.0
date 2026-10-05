@@ -15,10 +15,15 @@ from typing import List, Dict, Any, Optional
 try:
     import pdfplumber
 except ImportError:
-    print(json.dumps({
-        "error": "Missing dependency 'pdfplumber'. Please run: pip install pdfplumber"
-    }), file=sys.stderr)
-    sys.exit(1)
+    import subprocess
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pdfplumber", "--quiet"])
+        import pdfplumber
+    except Exception as e:
+        print(json.dumps({
+            "error": f"Missing dependency 'pdfplumber'. Automatic install failed: {e}. Please run: pip install pdfplumber"
+        }), file=sys.stderr)
+        sys.exit(1)
 
 
 DAY_NAME_MAP = {

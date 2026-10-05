@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "postinstall": "pip install pdfplumber || pip3 install pdfplumber || python3 -m pip install pdfplumber || true"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.7",
