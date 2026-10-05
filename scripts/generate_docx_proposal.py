@@ -21,101 +21,117 @@ def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
         tcMar.append(node)
     tcPr.append(tcMar)
 
-def create_proposal_docx(output_path):
+def create_friendly_proposal_docx(output_path):
     doc = Document()
 
-    # Page Margins: 1 inch (72 pt = 1440 dxa)
-    sections = doc.sections
-    for section in sections:
+    # Page Margins: Standard 1 inch (72 pt) on all sides
+    for section in doc.sections:
         section.top_margin = Inches(1.0)
         section.bottom_margin = Inches(1.0)
         section.left_margin = Inches(1.0)
         section.right_margin = Inches(1.0)
 
-    # Base Styles
+    # Base Normal Style: Strictly Times New Roman, 12 pt, black text
     normal_style = doc.styles['Normal']
     normal_font = normal_style.font
-    normal_font.name = 'Calibri'
-    normal_font.size = Pt(11)
-    normal_font.color.rgb = RGBColor(0x22, 0x22, 0x22)
+    normal_font.name = 'Times New Roman'
+    normal_font.size = Pt(12)
+    normal_font.color.rgb = RGBColor(0x00, 0x00, 0x00)
 
-    # Document Header / Pre-title
-    p_meta = doc.add_paragraph()
-    p_meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_meta = p_meta.add_run("ACADEMIC PROJECT PROPOSAL REPORT\nDEPARTMENT OF COMPUTER SCIENCE & ENGINEERING\nUTTARA UNIVERSITY, DHAKA, BANGLADESH")
-    run_meta.font.size = Pt(10)
-    run_meta.font.bold = True
-    run_meta.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+    # Document Header / Varsity Title
+    p_varsity = doc.add_paragraph()
+    p_varsity.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_varsity.paragraph_format.space_after = Pt(2)
+    r_v1 = p_varsity.add_run("UTTARA UNIVERSITY\n")
+    r_v1.font.name = 'Times New Roman'
+    r_v1.font.size = Pt(14)
+    r_v1.font.bold = True
+    r_v1.font.color.rgb = RGBColor(0x00, 0x20, 0x60) # Formal Varsity Navy
 
-    doc.add_paragraph().paragraph_format.space_after = Pt(6)
+    r_v2 = p_varsity.add_run("School of Science and Engineering\nDepartment of Computer Science & Engineering (CSE)")
+    r_v2.font.name = 'Times New Roman'
+    r_v2.font.size = Pt(12)
+    r_v2.font.bold = True
+    r_v2.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
+
+    p_doc_type = doc.add_paragraph()
+    p_doc_type.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_doc_type.paragraph_format.space_before = Pt(6)
+    p_doc_type.paragraph_format.space_after = Pt(14)
+    r_dt = p_doc_type.add_run("CAPSTONE PROJECT PROPOSAL REPORT")
+    r_dt.font.name = 'Times New Roman'
+    r_dt.font.size = Pt(13)
+    r_dt.font.bold = True
+    r_dt.font.underline = True
 
     # Main Project Title
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_title = p_title.add_run("UniRoom-Live: A Multi-Tenant Real-Time Classroom Orchestration and Dynamic Academic Schedule Synchronization Platform")
-    run_title.font.size = Pt(20)
-    run_title.font.bold = True
-    run_title.font.color.rgb = RGBColor(0x11, 0x2D, 0x4E) # Deep Navy
     p_title.paragraph_format.space_after = Pt(6)
+    r_title = p_title.add_run("Project Title:\nUniRoom-Live: A Real-Time Classroom Booking and Smart Routine Management System for Universities")
+    r_title.font.name = 'Times New Roman'
+    r_title.font.size = Pt(16)
+    r_title.font.bold = True
+    r_title.font.color.rgb = RGBColor(0x00, 0x20, 0x60)
 
     # Subtitle
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_sub = p_sub.add_run("Eliminating Campus Timetable Disruption and Room Allocation Collisions Through Concurrency-Controlled Resource Orchestration, Instant Push Synchronization, and Responsive Mobile Workflows")
-    run_sub.font.size = Pt(12)
-    run_sub.font.italic = True
-    run_sub.font.color.rgb = RGBColor(0x44, 0x55, 0x66)
     p_sub.paragraph_format.space_after = Pt(18)
+    r_sub = p_sub.add_run("Solving Daily Routine Confusion, Classroom Clashes, and Attendance Headaches in Campus Life")
+    r_sub.font.name = 'Times New Roman'
+    r_sub.font.size = Pt(12)
+    r_sub.font.italic = True
+    r_sub.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
 
     # Metadata Table
     meta_table = doc.add_table(rows=0, cols=2)
     meta_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     meta_table.autofit = False
 
-    metadata_rows = [
-        ("Institution", "Uttara University"),
-        ("Faculty / School", "School of Science and Engineering"),
+    meta_rows = [
+        ("Course Title", "Project & Thesis / Capstone Project (CSE 4XX)"),
         ("Department", "Department of Computer Science & Engineering (CSE)"),
-        ("Course Title", "Capstone Design Project / Project & Thesis (CSE 4XX)"),
-        ("Project Domain", "Distributed Systems, Cloud Computing & Cross-Platform Mobile Engineering"),
-        ("Target Platforms", "Android, iOS, Progressive Web App (PWA), Desktop Web"),
-        ("Target Stakeholders", "Students, Class Representatives (CRs), Faculty, Department Coordinators, Admin"),
-        ("Version & Status", "Version 2.0 (Production-Ready Architecture)"),
+        ("University", "Uttara University, Dhaka, Bangladesh"),
+        ("Project Domain", "Web & Mobile Application, Database Systems"),
+        ("Target Users", "Students, Class Representatives (CRs), Teachers, and Department Admins"),
+        ("Platforms", "Android Mobile App, iOS, and Web Admin Panel"),
     ]
 
-    for label, val in metadata_rows:
+    for label, val in meta_rows:
         row = meta_table.add_row()
         c0, c1 = row.cells[0], row.cells[1]
-        c0.width = Inches(2.2)
-        c1.width = Inches(4.3)
-        
-        set_cell_background(c0, "F0F4F8")
-        set_cell_background(c1, "FAFAFA")
-        set_cell_margins(c0, top=80, bottom=80, left=120, right=120)
-        set_cell_margins(c1, top=80, bottom=80, left=120, right=120)
+        c0.width = Inches(2.3)
+        c1.width = Inches(4.2)
+        set_cell_background(c0, "F2F2F2")
+        set_cell_background(c1, "FFFFFF")
+        set_cell_margins(c0, top=70, bottom=70, left=100, right=100)
+        set_cell_margins(c1, top=70, bottom=70, left=100, right=100)
 
         p0 = c0.paragraphs[0]
         r0 = p0.add_run(label)
+        r0.font.name = 'Times New Roman'
         r0.font.bold = True
-        r0.font.size = Pt(9.5)
-        r0.font.color.rgb = RGBColor(0x11, 0x2D, 0x4E)
+        r0.font.size = Pt(11)
 
         p1 = c1.paragraphs[0]
         r1 = p1.add_run(val)
-        r1.font.size = Pt(9.5)
+        r1.font.name = 'Times New Roman'
+        r1.font.size = Pt(11)
 
-    doc.add_paragraph().paragraph_format.space_after = Pt(16)
+    doc.add_paragraph().paragraph_format.space_after = Pt(14)
 
-    # Helper for Headings
+    # Helper functions with strict Times New Roman
     def add_h1(text):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(16)
         p.paragraph_format.space_after = Pt(6)
         p.paragraph_format.keep_with_next = True
         run = p.add_run(text)
-        run.font.size = Pt(15)
+        run.font.name = 'Times New Roman'
+        run.font.size = Pt(14)
         run.font.bold = True
-        run.font.color.rgb = RGBColor(0x0F, 0x4C, 0x81) # Classic Academic Blue
+        run.font.color.rgb = RGBColor(0x00, 0x20, 0x60)
         return p
 
     def add_h2(text):
@@ -124,9 +140,10 @@ def create_proposal_docx(output_path):
         p.paragraph_format.space_after = Pt(4)
         p.paragraph_format.keep_with_next = True
         run = p.add_run(text)
+        run.font.name = 'Times New Roman'
         run.font.size = Pt(12.5)
         run.font.bold = True
-        run.font.color.rgb = RGBColor(0x1E, 0x3A, 0x5F)
+        run.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
         return p
 
     def add_body(text, space_after=6, italic=False, bold=False):
@@ -134,7 +151,8 @@ def create_proposal_docx(output_path):
         p.paragraph_format.space_after = Pt(space_after)
         p.paragraph_format.line_spacing = 1.15
         run = p.add_run(text)
-        run.font.size = Pt(11)
+        run.font.name = 'Times New Roman'
+        run.font.size = Pt(12)
         run.font.italic = italic
         run.font.bold = bold
         return p
@@ -144,334 +162,313 @@ def create_proposal_docx(output_path):
         p.paragraph_format.space_after = Pt(4)
         p.paragraph_format.line_spacing = 1.15
         r_lead = p.add_run(lead_bold)
+        r_lead.font.name = 'Times New Roman'
         r_lead.font.bold = True
-        r_lead.font.size = Pt(11)
+        r_lead.font.size = Pt(12)
         r_rest = p.add_run(rest_text)
-        r_rest.font.size = Pt(11)
+        r_rest.font.name = 'Times New Roman'
+        r_rest.font.size = Pt(12)
         return p
 
-    # SECTION 1: INTRODUCTION
+    # =========================================================================
+    # 1. INTRODUCTION
+    # =========================================================================
     add_h1("1. INTRODUCTION")
-    
+
     add_h2("1.1 Background and Context")
     add_body(
-        "Higher education institutions operate in intricate, fast-moving environments characterized by multi-shift academic "
-        "programs, shared specialized laboratories, large student enrollments, and hundreds of lecture halls distributed "
-        "across distinct physical campus buildings. At institutions such as Uttara University, academic schedules are not "
-        "static; they fluctuate continuously throughout each semester due to makeup and extra classes, unplanned faculty "
-        "reassignments, specialized lab migrations, and ad-hoc student project presentations or club workshops."
+        "In our university life at Uttara University, managing classes and finding empty rooms is a daily challenge. "
+        "Every semester, thousands of students attend classes in different buildings and floors. However, academic "
+        "schedules do not stay the same throughout the semester. Teachers frequently take extra classes to complete the syllabus, "
+        "reschedule classes due to personal or departmental meetings, or move classes to computer labs for practical work. "
+        "Also, students often need empty classrooms for group study, club meetings, and project presentations."
     )
     add_body(
-        "Historically, academic institutions communicated these changes using static paper notices, physical bulletin boards, "
-        "and periodically published PDF routine sheets. In recent years, communication transitioned toward informal messaging "
-        "platforms, including WhatsApp, Telegram, and Facebook Messenger groups. While fast, this informal model introduces "
-        "critical communication bottlenecks, fragmented information silos, and administrative disorder."
+        "Currently, universities in Bangladesh manage these changes through manual notices or informal social media chat groups "
+        "such as WhatsApp and Facebook Messenger. While WhatsApp is common, it creates serious confusion. When a teacher tells the "
+        "Class Representative (CR) that a class is cancelled or moved to another room, the CR posts it in the group chat. "
+        "Very often, students who are traveling on the bus through Dhaka traffic do not have mobile data turned on, or the important notice "
+        "gets lost under hundreds of normal chat messages. As a result, students travel a long way to campus only to discover that "
+        "their class was cancelled hours ago."
     )
 
     add_h2("1.2 System Overview")
     add_body(
-        "UniRoom-Live is conceived, designed, and engineered as an enterprise-grade, centralized, and authoritative real-time "
-        "operational hub for campus schedules and classroom assets. The platform replaces informal chat groups and static PDF "
-        "documents with an active, event-driven digital ecosystem built upon a decoupled Three-Tier Architecture:"
+        "UniRoom-Live is designed and built to solve these daily campus headaches. It is a modern, real-time web and mobile "
+        "application that acts as the single, official source of truth for university routines and classroom availability. "
+        "Instead of checking multiple PDF files or asking friends on WhatsApp, students and teachers can simply open the app on their phones "
+        "and immediately see today's live schedule."
     )
-    add_bullet("1. Presentation Tier (Flutter Cross-Platform Application): ", 
-               "A fluid, high-performance client delivering customized workflows for Students, Class Representatives, Faculty, and Administrators, with responsive layout tuning down to 360px viewport widths and client-side offline routine caching.")
-    add_bullet("2. Application Tier (NestJS Enterprise REST API): ", 
-               "A modular TypeScript micro-framework orchestrating multi-tenancy isolation, authentication guards, pre-flight conflict validation, and event dispatch pipelines.")
-    add_bullet("3. Data and Event Tier (PostgreSQL + Prisma ORM + FCM): ", 
-               "An ACID-compliant relational persistence store executing transactional locks, version-controlled records, and push event pipelines via Firebase Cloud Messaging and SMTP email relays.")
-
-    add_h2("1.3 Target Stakeholders and Operational Roles")
     add_body(
-        "UniRoom-Live organizes university operations around five distinct Role-Based Access Control (RBAC) privilege tiers:"
+        "The system consists of three main parts that work together smoothly:"
     )
-    add_bullet("Superadmin / Institutional Executive: ", "Configures global institutional boundaries, manages multi-campus facilities, and monitors macro-level operational metrics.")
-    add_bullet("Department Admin / Program Coordinator: ", "Establishes master semester schedules, assigns batches and instructors, resolves cross-departmental room collisions, and audits facility usage logs.")
-    add_bullet("Faculty Member: ", "Reviews real-time daily teaching agendas, requests vacant classrooms for extra sessions, releases reserved rooms early when lectures conclude ahead of schedule, and receives instant attendance rolls.")
-    add_bullet("Class Representative (CR): ", "Serves as the frontline operational liaison for student cohorts; reserves on-demand rooms for batch sessions, logs daily student attendance using a rapid-entry absent keypad, and formats automatic SMS reports to instructors.")
-    add_bullet("Student: ", "Accesses real-time, filtered daily routines, checks live room availability across campus buildings, and receives instant push notifications when classes are rescheduled, relocated, or cancelled.")
+    add_bullet("1. Mobile Application (Flutter): ", 
+               "A fast and user-friendly mobile app for Android and iOS. It works on all phone screen sizes (including small budget phones with 360px width) and allows students to check routines even when offline.")
+    add_bullet("2. Central Server (NestJS): ", 
+               "The brain of the system that manages user accounts, checks that no two batches book the same room at the same time, and sends push notifications to phones.")
+    add_bullet("3. Database (PostgreSQL): ", 
+               "A reliable relational database that safely stores all room details, weekly routine slots, bookings, and attendance records.")
 
-    # SECTION 2: PROBLEM STATEMENT
+    add_h2("1.3 Target Users and Their Roles")
+    add_body(
+        "UniRoom-Live is built for the entire campus community, with clear roles for each type of user:"
+    )
+    add_bullet("Students: ", 
+               "They can see their daily class routine, check which rooms are currently empty on campus to sit and study, and receive instant push notifications if any class is rescheduled or cancelled.")
+    add_bullet("Class Representatives (CRs): ", 
+               "They can find empty classrooms and book them for make-up lectures, quickly record student attendance during class, and automatically send a formatted SMS to the course teacher in one tap.")
+    add_bullet("Teachers (Faculty Members): ", 
+               "They can view their daily teaching routine, release a booked classroom early if their class finishes ahead of time, and receive accurate student attendance lists directly on their phones.")
+    add_bullet("Department Coordinators & Admins: ", 
+               "They can upload the semester master routine, manage classroom details, and ensure that no two batches are scheduled in the same room.")
+
+    # =========================================================================
+    # 2. PROBLEM STATEMENT
+    # =========================================================================
     add_h1("2. PROBLEM STATEMENT")
     add_body(
-        "Despite substantial investments in modern university infrastructure, daily campus administration experiences severe "
-        "operational friction caused by manual scheduling practices and decentralized communication tools. The critical problems "
-        "addressed by this project are:"
-    )
-    
-    add_h2("2.1 Fragmented Communication and Schedule Desynchronization")
-    add_body(
-        "When an instructor shifts a lecture from 8:30 AM to 11:30 AM or relocates from Room 402 to Lab 605, updates are typically "
-        "transmitted via phone calls to the Class Representative, who then types a notice into a social media group chat. This approach "
-        "repeatedly fails: students with muted notifications or poor connectivity miss announcements and travel to campus unnecessarily; "
-        "critical schedule updates become lost under casual chat conversations; and students rely on obsolete PDF files without an authoritative source of truth."
+        "Through our daily experience as university students and discussions with teachers and Class Representatives, "
+        "we identified five major problems that happen every day on campus:"
     )
 
-    add_h2("2.2 Physical Classroom Collisions and Double-Booking")
+    add_h2("2.1 Routine Confusion from WhatsApp and Facebook Groups")
     add_body(
-        "When multiple instructors or batch representatives organize extra lectures, review sessions, or makeup labs, they often identify "
-        "a seemingly empty room on a static timetable and occupy it without centralized coordination. Consequently, multiple cohorts "
-        "(e.g., Batch 58 and Batch 61) arrive at the exact same laboratory or classroom simultaneously, leading to academic disruption, "
-        "embarrassment, and lost instructional time."
+        "When a teacher reschedules a class from 8:45 AM to 11:25 AM, the news is sent by phone call to the CR, who writes a text "
+        "message in the batch WhatsApp or Messenger group. This traditional method fails repeatedly. Students miss the notification "
+        "because of poor network or muted groups, messages get buried under casual chatter, and students arrive at university unnecessarily. "
+        "There is no single official app where students can check the confirmed schedule."
     )
 
-    add_h2("2.3 Resource Inefficiency and 'Ghost Occupancy'")
+    add_h2("2.2 Classroom Clashes and Double-Booking")
     add_body(
-        "Standard campus routine models allocate rooms in rigid blocks (e.g., 90 or 120 minutes). If a lecture concludes 30 minutes early, "
-        "or if an instructor cancels a class due to illness or departmental duties, the room remains officially designated as 'Occupied' "
-        "on paper. Consequently, physical spaces remain locked and empty while other student groups search fruitlessly for available study or presentation venues."
+        "When two different teachers or CRs plan to take an extra class or quiz at the same time, they both look for an empty room and enter it. "
+        "Because there is no live central booking system, two whole batches (for example, Batch 60 and Batch 62) often show up at the exact same "
+        "classroom at the same time. This leads to arguments, embarrassment, and lost lecture time."
     )
 
-    add_h2("2.4 Administrative Burden on Class Representatives (CRs)")
+    add_h2("2.3 Empty Classrooms Staying Locked ('Ghost Occupancy')")
     add_body(
-        "Class Representatives perform repetitive clerical duties that disrupt their academic focus: conducting manual roll calls on scrap sheets "
-        "of paper during short class breaks, transcribing lists of absent student ID numbers, and typing long lists of 10-digit student ID "
-        "numbers into their smartphones to send via SMS to instructors. This manual process introduces transcription errors and delays attendance reporting."
+        "On the official paper routine, a class slot is usually 80 or 160 minutes long. If a teacher finishes class 30 minutes early, "
+        "or cancels class for the day, the room remains officially marked as 'Occupied'. Other students who desperately need an empty "
+        "room to practice coding, prepare for presentations, or study quietly cannot enter because everyone assumes the room is busy. "
+        "This wastes valuable campus resources."
     )
 
-    add_h2("2.5 Absence of Real-Time Concurrency Control and Auditability")
+    add_h2("2.4 Heavy Burden and Mistakes in CR Attendance Management")
     add_body(
-        "Prior academic management applications lack robust database concurrency controls. When two users submit a reservation request for "
-        "the same vacant lecture hall within milliseconds of each other, standard database queries create duplicate records (race conditions). "
-        "Furthermore, paper and group-chat methods lack immutable audit trails to verify who authorized schedule overrides or abandoned assigned rooms."
+        "In our university, Class Representatives have to take attendance during short 5-minute class breaks. The CR has to write down "
+        "long 10-digit student ID numbers on small scraps of paper. Then, after class, the CR has to manually type all those absent ID numbers "
+        "one by one into their phone's SMS app and send it to the course teacher. This takes 10 to 15 minutes of personal time every class, "
+        "causes typing mistakes, and delays attendance submission."
     )
 
-    # SECTION 3: OBJECTIVES
+    add_h2("2.5 No Protection Against Simultaneous Bookings in Naive Systems")
+    add_body(
+        "Basic website forms and paper sheets do not have concurrency control. If two CRs click 'Book Room' for the same room within the "
+        "same second, traditional naive database queries create two approved bookings for the exact same room. Furthermore, there is no audit "
+        "trail to see who booked a room or why a schedule was changed."
+    )
+
+    # =========================================================================
+    # 3. OBJECTIVES
+    # =========================================================================
     add_h1("3. OBJECTIVES")
     add_body(
-        "The objectives of this project are strictly formulated to address the identified operational and technical bottlenecks:"
+        "The objectives of this project are directly designed to solve the problems mentioned above. "
+        "In strict accordance with academic project standards, every objective starts with the word 'To':"
     )
 
     add_h2("3.1 Primary Objective")
-    add_bullet("To ", "design and implement a multi-tenant, cloud-synchronized real-time classroom orchestration and dynamic academic schedule management platform that unifies students, faculty members, and campus administrators under a single authoritative, high-availability digital ecosystem.")
+    add_bullet("To ", "design and develop a real-time, user-friendly classroom booking and academic routine management platform called UniRoom-Live that brings students, teachers, and university administration into a single, synchronized digital environment.")
 
-    add_h2("3.2 Specific Technical and Research Objectives")
-    add_bullet("To ", "develop an Optimistic Concurrency Control (OCC) and atomic transactional booking engine within a relational PostgreSQL database to eliminate race conditions, preventing double-booking of physical classrooms during high-traffic scheduling windows.")
-    add_bullet("To ", "formulate an intelligent pre-flight conflict detection algorithm that cross-evaluates proposed timetable modifications against physical room capacities, faculty availability, and student cohort schedules prior to database persistence.")
-    add_bullet("To ", "engineer an automated push notification and event distribution pipeline leveraging Firebase Cloud Messaging (FCM) and SMTP services to instantly broadcast schedule alterations, cancellations, and room reallocations to all affected stakeholders.")
-    add_bullet("To ", "implement a dynamic room release and early-checkout mechanism that liberates unoccupied physical spaces back into the public vacancy pool, systematically eliminating 'ghost occupancy' and maximizing campus facility utilization.")
-    add_bullet("To ", "build a streamlined Class Representative (CR) attendance utility featuring a rapid-entry absent keypad and an automated SMS generation engine to eliminate manual transcription errors and accelerate faculty roll reporting.")
-    add_bullet("To ", "establish a secure, multi-tenant Role-Based Access Control (RBAC) security architecture powered by JSON Web Tokens (JWT) and cryptographic hashing to enforce strict operational boundaries across five user privilege tiers.")
-    add_bullet("To ", "create a high-performance, cross-platform mobile client in Flutter that delivers an adaptive, fluid user experience across diverse screen dimensions (specifically optimized down to 360px viewport widths) with client-side caching for offline routine consultation.")
-    add_bullet("To ", "evaluate the operational efficiency, latency, and system reliability through rigorous integration testing, simulated concurrent load scenarios, and real-world stakeholder usability trials at Uttara University.")
+    add_h2("3.2 Specific Technical Objectives")
+    add_bullet("To ", "build an automatic room-locking system using database transactions so that two users can never double-book the same physical classroom at the same time.")
+    add_bullet("To ", "create a smart routine checker that checks room availability, teacher schedules, and student batch times before saving, completely preventing timetable clashes.")
+    add_bullet("To ", "implement an instant push notification system using Firebase Cloud Messaging (FCM) that automatically alerts students on their smartphones whenever a class is cancelled, rescheduled, or relocated.")
+    add_bullet("To ", "develop an early room release feature that allows teachers and CRs to release a room with one tap when class finishes early, making the room immediately available for other students.")
+    add_bullet("To ", "build a rapid attendance keypad for Class Representatives (CRs) that allows quick entry of absent student roll numbers and automatically generates a ready-to-send SMS for the teacher.")
+    add_bullet("To ", "establish a secure login system with five user privilege levels (Super Admin, Department Admin, Teacher, CR, Student) using secure tokens (JWT) and encrypted passwords (Bcrypt).")
+    add_bullet("To ", "create a cross-platform mobile application in Flutter that works smoothly and responsively on all Android and iOS smartphones, specifically optimized for small 360px width screens with offline routine caching.")
+    add_bullet("To ", "test and evaluate the complete system through real-world usability trials and load tests at Uttara University to verify that it is fast, simple, and reliable for daily campus use.")
 
-    # SECTION 4: PROJECT SCOPE
+    # =========================================================================
+    # 4. PROJECT SCOPE
+    # =========================================================================
     add_h1("4. PROJECT SCOPE")
-    add_h2("4.1 In-Scope Deliverables and Core Modules")
+    add_h2("4.1 In-Scope Features (What the System Includes)")
     add_body(
-        "The development and implementation scope of UniRoom-Live encompasses the following operational and technical modules:"
+        "UniRoom-Live covers the following key features and modules:"
     )
-    add_bullet("1. Multi-Tenant Physical and Academic Hierarchy: ", 
-               "Complete relational modeling of Institutions, Campuses, Buildings, Rooms, Departments, Degree Programs, and Student Batches/Sections with floor, capacity, and room categorization.")
-    add_bullet("2. Master Timetable & Dynamic Routine Synchronization: ", 
-               "Authoring, updating, and real-time synchronization of recurring weekly class schedules with multi-parameter filtering (by Day, Department, Semester, Batch, Faculty) and offline client caching.")
-    add_bullet("3. Pre-Flight Conflict Inspection Matrix: ", 
-               "Triple-factor validation ensuring no room collisions, faculty schedule overlaps, or batch double-scheduling can be persisted into the database.")
-    add_bullet("4. Real-Time Room Discovery and Concurrency-Controlled Booking: ", 
-               "Live vacancy scanning across campus facilities and atomic reservation processing backed by Optimistic Concurrency Control (OCC).")
-    add_bullet("5. Dynamic Early Room Release Engine: ", 
-               "Early checkout workflow enabling instructors and CRs to release vacant spaces back to the public pool ahead of scheduled slot conclusions.")
-    add_bullet("6. CR Rapid Attendance & Telephony Integration: ", 
-               "Custom numerical absent-roll keypad, automated statistical computation, and direct device telephony SMS launching with pre-populated instructor phone numbers and formatted absent ID strings.")
-    add_bullet("7. Enterprise Authentication & Role-Based Access Control (RBAC): ", 
-               "Secure JWT authentication, Bcrypt password salting and hashing, and permission guards enforcing boundaries across 5 user privilege levels.")
-    add_bullet("8. Multi-Channel Notification Infrastructure: ", 
-               "Real-time background push alerts via Firebase Cloud Messaging (FCM) and institutional transactional emails via Nodemailer/SMTP.")
-    add_bullet("9. Ultra-Responsive Mobile Client: ", 
-               "Flutter mobile client for Android, iOS, and Web optimized for seamless rendering across all mobile screen widths down to 360px.")
+    add_bullet("1. Complete Campus Hierarchy: ", 
+               "Organizes the university into Campuses, Buildings, Floors, Classrooms, Computer Labs, Departments, and Batches.")
+    add_bullet("2. Master Routine Management: ", 
+               "Allows department admins to manage weekly class schedules with simple filters by Day, Batch, Section, and Teacher.")
+    add_bullet("3. Timetable PDF Parser: ", 
+               "Allows admins to upload the official university routine PDF (e.g. routine_cse.pdf) and automatically extracts all class slots into the database without needing manual typing.")
+    add_bullet("4. Real-Time Room Vacancy Finder: ", 
+               "Students and CRs can search and see which rooms are currently empty on campus right now or in the next period.")
+    add_bullet("5. Safe Room Booking with Conflict Protection: ", 
+               "Authorized CRs and teachers can book empty classrooms for extra classes with guaranteed protection against double-booking.")
+    add_bullet("6. One-Tap Early Room Release: ", 
+               "Enables occupants to release a room immediately if class finishes early, changing the room status back to 'Available'.")
+    add_bullet("7. CR Attendance Keypad & Auto-SMS: ", 
+               "Provides a custom numerical keypad for CRs to record absent roll numbers in seconds and opens the phone's native SMS app with the teacher's number and absent list pre-filled.")
+    add_bullet("8. Mobile Push Notifications: ", 
+               "Sends background push alerts directly to students' phone lock screens when any class is changed or cancelled.")
+    add_bullet("9. Responsive Mobile Client with Offline Support: ", 
+               "A lightweight Flutter app that saves the weekly routine on the device, allowing students to check routine even without internet.")
 
-    add_h2("4.2 Out-of-Scope and Future Boundaries")
+    add_h2("4.2 Out-of-Scope (What is Reserved for Future Versions)")
     add_body(
-        "To ensure high engineering quality, architectural focus, and successful deployment within the academic semester timeframe, "
-        "the following components are explicitly defined as out-of-scope for the Version 2.0 release:"
+        "To keep the project focused, practical, and completed on time within our university semester, "
+        "the following hardware and experimental features are kept for future versions:"
     )
-    add_bullet("Physical IoT Hardware Door Locks: ", "Direct electronic solenoid turnstiles and micro-controller relays (scheduled for Version 3.0 IoT hardware integration).")
-    add_bullet("Biometric Hardware Terminals: ", "Dedicated optical fingerprint readers or standalone thermal infrared facial scanners.")
-    add_bullet("Financial Payment Gateways: ", "Monetary payment or room rental billing processing.")
-    add_bullet("Fully Automated AI Timetable Generation: ", "Automated schedule generation using genetic algorithms (the system provides master routine management and pre-flight conflict detection; automated heuristic synthesis is earmarked for future research).")
+    add_bullet("Physical Smart Door Hardware: ", 
+               "Electronic magnetic door locks and RFID turnstiles on classroom doors (planned for Version 3.0 IoT integration).")
+    add_bullet("Biometric Face Recognition Machines: ", 
+               "Wall-mounted infrared face scanners (our system focuses on the software mobile solution).")
+    add_bullet("Payment Gateway Integration: ", 
+               "Money collection or room rental fees (our system is strictly for free internal university academic use).")
+    add_bullet("Full AI Automatic Timetable Generation: ", 
+               "Fully generating a semester routine from scratch using genetic algorithms (our system checks and verifies routines; full generation is reserved for future research).")
 
-    # SECTION 5: METHODOLOGY
+    # =========================================================================
+    # 5. METHODOLOGY
+    # =========================================================================
     add_h1("5. METHODOLOGY")
     add_body(
-        "The engineering and execution of UniRoom-Live follows a disciplined, agile methodology combining empirical requirement "
-        "analysis, decoupled three-tier system architecture, relational database concurrency modeling, and rigorous multi-stage quality assurance."
+        "We followed a clear, practical software engineering approach to design, build, and test UniRoom-Live."
     )
 
     add_h2("5.1 Software Development Life Cycle (SDLC) - Agile/Scrum")
     add_body(
-        "The project is structured under the Agile / Scrum development lifecycle, partitioned into eight 2-week sprints across a 16-week timeline. "
-        "This iterative approach was chosen because university scheduling dynamics and mobile user experience workflows benefit from continuous "
-        "validation by actual students, Class Representatives, and faculty members."
+        "We chose the Agile/Scrum development process with 2-week sprints across a 16-week project timeline. "
+        "We selected Agile rather than traditional Waterfall because university routines have many real-life exceptions—such as 2-period lab classes, "
+        "joint sections, and small phone screens—which required regular testing and feedback from real students and CRs."
     )
+    add_bullet("Sprint 1 (Weeks 1-2): ", "Requirements gathering, student interviews, and database schema design.")
+    add_bullet("Sprint 2 (Weeks 3-4): ", "User authentication, password encryption (Bcrypt), and token security (JWT).")
+    add_bullet("Sprint 3 (Weeks 5-6): ", "Weekly routine manager and pre-flight clash checking algorithm.")
+    add_bullet("Sprint 4 (Weeks 7-8): ", "Real-time room vacancy finder, booking engine, and early room checkout.")
+    add_bullet("Sprint 5 (Weeks 9-10): ", "CR attendance keypad, statistics calculations, and automated phone SMS generator.")
+    add_bullet("Sprint 6 (Weeks 11-12): ", "Flutter mobile UI improvements, fixing layout on 360px small screens, and offline caching.")
+    add_bullet("Sprint 7 (Weeks 13-14): ", "Firebase Cloud Messaging (FCM) push notifications and email service.")
+    add_bullet("Sprint 8 (Weeks 15-16): ", "Final load testing, fixing bugs, usability trials at Uttara University, and documentation.")
 
-    add_h2("5.2 Requirement Engineering and System Specifications")
+    add_h2("5.2 Three-Tier System Architecture")
     add_body(
-        "Requirements were synthesized through structured interviews with Uttara University academic coordinators, faculty members, and CRs:"
+        "UniRoom-Live is built using a clean 3-Tier Architecture so that each part of the system is independent and easy to maintain:"
     )
-    add_bullet("Functional Requirements (FRs): ", 
-               "FR-1 (Hierarchy Modeling), FR-2 (Role Authentication & RBAC), FR-3 (Master Timetable Filtering), FR-4 (Triple-Collision Pre-Flight Validation), FR-5 (Concurrency-Safe Room Booking), FR-6 (Early Room Release), FR-7 (CR Attendance & SMS Engine), FR-8 (FCM Push Notifications).")
-    add_bullet("Non-Functional Requirements (NFRs): ", 
-               "NFR-1 (Zero Double-Booking & ACID Integrity), NFR-2 (Sub-150ms Query Latency), NFR-3 (Fluid Responsiveness down to 360px Screen Widths), NFR-4 (Offline-First Routine Caching), NFR-5 (Bcrypt Hashing and Signed JWT Security).")
+    add_bullet("1. Client Layer (Presentation): ", 
+               "The mobile app is built with Flutter (Dart) and the admin portal with React/Vite. The mobile app uses Provider for smooth state management.")
+    add_bullet("2. API Layer (Business Logic): ", 
+               "Built with NestJS (TypeScript). It handles all business logic, checks user permissions, verifies room availability, and coordinates notifications.")
+    add_bullet("3. Data Layer (Persistence): ", 
+               "PostgreSQL database hosted on Neon Cloud, managed using Prisma ORM for safe, strongly-typed database queries.")
 
-    add_h2("5.3 System Architecture and High-Level Design")
+    add_h2("5.3 How the System Stops Double-Booking (Concurrency Protection)")
     add_body(
-        "UniRoom-Live implements a decoupled Three-Tier Architecture:"
-    )
-    add_bullet("1. Client Layer: ", "Cross-platform Flutter application utilizing Provider state management and responsive layout builders.")
-    add_bullet("2. API & Orchestration Layer: ", "Modular NestJS backend utilizing dependency injection, declarative validation pipes, and role authorization guards.")
-    add_bullet("3. Data & Messaging Layer: ", "Neon Serverless PostgreSQL database interfaced via Prisma ORM, complemented by Firebase Cloud Messaging and SMTP gateways.")
-
-    add_h2("5.4 Database Design and Concurrency Control Strategy")
-    add_body(
-        "The persistence layer comprises ten normalized relational entities (Institutions, Campuses, Buildings, Rooms, Departments, "
-        "Batches, Users, Routines, Bookings, AttendanceLogs). To prevent double-booking during concurrent booking requests, the system "
-        "employs Optimistic Concurrency Control (OCC) using atomic database transactions:"
+        "To make sure that two users can never book the same room at the same time, UniRoom-Live uses atomic database transactions. "
+        "When a user wants to book Room 402 for a timeslot between Start Time (Ts) and End Time (Te), the server checks existing bookings:"
     )
     add_body(
-        "Collision Detection Condition: (ExistingStartTime < RequestedEndTime) AND (ExistingEndTime > RequestedStartTime)",
+        "Collision Rule: (Existing Start Time < Requested End Time) AND (Existing End Time > Requested Start Time)",
         italic=True, bold=True
     )
     add_body(
-        "When a conflict is detected during atomic transaction execution, the database rolls back the operation and returns an HTTP 409 "
-        "Conflict exception, guaranteeing zero duplicate room reservations."
+        "If any existing approved booking overlaps with these times, the transaction immediately cancels and returns an error "
+        "('Room is already booked for this time'). Exactly one booking succeeds, making double-booking mathematically impossible."
     )
 
-    add_h2("5.5 Implementation Phases and Sprint Breakdown")
+    add_h2("5.4 Tools and Technologies Used")
     
-    # Sprint Table
-    sprint_table = doc.add_table(rows=0, cols=4)
-    sprint_table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    sprint_table.autofit = False
-
-    sprint_data = [
-        ("Phase / Sprint", "Duration", "Key Deliverables", "Milestone Outcome"),
-        ("Sprint 1: Domain Modeling", "Weeks 1–2", "Requirements specification, ER diagram, Prisma schema design, Git repository setup.", "Data model & DB migrations solidified."),
-        ("Sprint 2: Auth & RBAC", "Weeks 3–4", "NestJS Auth module, Bcrypt password hashing, JWT strategy, Role guards.", "Secure 5-tier authentication operational."),
-        ("Sprint 3: Routine Engine", "Weeks 5–6", "CRUD timetable endpoints, multi-parameter filtering, conflict pre-flight validator.", "Zero-conflict routine authoring verified."),
-        ("Sprint 4: Room Booking & OCC", "Weeks 7–8", "Vacancy search algorithm, atomic room reservation transaction, early-release engine.", "Concurrency-safe room booking validated."),
-        ("Sprint 5: CR Attendance Suite", "Weeks 9–10", "Rapid absent keypad in Flutter, attendance summary widget, telephony SMS engine.", "CR attendance & SMS tested on mobile."),
-        ("Sprint 6: Responsive UI (360px)", "Weeks 11–12", "Layout refactoring, elimination of pixel overflows, adaptive dialogs, offline cache.", "Flawless rendering on 360px–412px viewports."),
-        ("Sprint 7: Real-Time Alerts", "Weeks 13–14", "Firebase Cloud Messaging integration, device token registration, SMTP mail service.", "Push notifications delivered on updates."),
-        ("Sprint 8: QA & Deployment", "Weeks 15–16", "Concurrency load tests, Jest integration suites, production deployment, UAT.", "System defense and production rollout."),
-    ]
-
-    for idx, (c0_text, c1_text, c2_text, c3_text) in enumerate(sprint_data):
-        row = sprint_table.add_row()
-        cells = row.cells
-        cells[0].width = Inches(1.8)
-        cells[1].width = Inches(1.0)
-        cells[2].width = Inches(2.3)
-        cells[3].width = Inches(1.4)
-        
-        is_header = (idx == 0)
-        bg_color = "112D4E" if is_header else ("F0F4F8" if idx % 2 == 1 else "FFFFFF")
-        
-        for c_idx, cell in enumerate(cells):
-            set_cell_background(cell, bg_color)
-            set_cell_margins(cell, top=60, bottom=60, left=80, right=80)
-            p = cell.paragraphs[0]
-            run = p.add_run([c0_text, c1_text, c2_text, c3_text][c_idx])
-            run.font.size = Pt(8.5 if not is_header else 9.0)
-            if is_header:
-                run.font.bold = True
-                run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-            else:
-                run.font.color.rgb = RGBColor(0x22, 0x22, 0x22)
-
-    doc.add_paragraph().paragraph_format.space_after = Pt(12)
-
-    add_h2("5.6 Technology Stack and Tooling")
-
-    tech_table = doc.add_table(rows=0, cols=4)
+    tech_table = doc.add_table(rows=0, cols=3)
     tech_table.alignment = WD_TABLE_ALIGNMENT.CENTER
     tech_table.autofit = False
 
     tech_data = [
-        ("Layer / Component", "Technology", "Version", "Engineering Justification"),
-        ("Mobile Client", "Flutter (Dart)", "SDK 3.x+ / Dart 3.x", "Single codebase for Android, iOS & Web; 60fps performance; 360px responsive control."),
-        ("State Management", "Provider", "^6.1.0", "Reactive, predictable state tree without boilerplate overhead."),
-        ("Backend Framework", "NestJS (TypeScript)", "^10.x", "Enterprise modular architecture, dependency injection, type safety."),
-        ("ORM Layer", "Prisma ORM", "^5.x", "Declarative schema, type-safe queries, automatic migration management."),
-        ("Database Engine", "PostgreSQL (Neon)", "v16 Cloud", "ACID transactions, row-level locks, cloud high availability."),
-        ("Authentication & Crypto", "JWT & Bcrypt", "Passport / Bcrypt.js", "Stateless, horizontally scalable authorization with cryptographic security."),
-        ("Push Notifications", "Firebase Cloud Messaging", "Firebase Admin SDK", "Battery-optimized background push notifications across platforms."),
-        ("SMS Telephony", "url_launcher (Intent)", "Native Mobile URI", "Direct hardware-level SMS creation without third-party SMS aggregator fees."),
-        ("Cloud Deployment", "Render & Neon", "Cloud Native", "Automated containerized CI/CD pipeline integrated with GitHub repository."),
+        ("Component", "Technology", "Why We Chose It"),
+        ("Mobile Frontend", "Flutter (Dart)", "Single codebase that runs fast on both Android and iOS with clean UI."),
+        ("State Management", "Provider", "Simple and reliable state management without unnecessary complex code."),
+        ("Backend Framework", "NestJS (Node.js/TS)", "Organized modular structure, very secure, and easy to maintain."),
+        ("Database ORM", "Prisma ORM", "Type-safe database tool that prevents SQL injection mistakes."),
+        ("Database", "PostgreSQL", "Industry-standard relational database with strong transaction safety."),
+        ("Push Notifications", "Firebase (FCM)", "Delivers instant push notifications to Android and iOS phones for free."),
+        ("CR SMS Feature", "url_launcher (Intent)", "Directly opens native phone SMS app without requiring paid SMS gateway APIs."),
     ]
 
-    for idx, (c0_text, c1_text, c2_text, c3_text) in enumerate(tech_data):
+    for idx, (c0_text, c1_text, c2_text) in enumerate(tech_data):
         row = tech_table.add_row()
         cells = row.cells
-        cells[0].width = Inches(1.5)
-        cells[1].width = Inches(1.5)
-        cells[2].width = Inches(1.1)
-        cells[3].width = Inches(2.4)
-        
+        cells[0].width = Inches(1.8)
+        cells[1].width = Inches(1.8)
+        cells[2].width = Inches(3.1)
         is_header = (idx == 0)
-        bg_color = "112D4E" if is_header else ("F0F4F8" if idx % 2 == 1 else "FFFFFF")
-        
+        bg_col = "002060" if is_header else ("F2F2F2" if idx % 2 == 1 else "FFFFFF")
+
         for c_idx, cell in enumerate(cells):
-            set_cell_background(cell, bg_color)
+            set_cell_background(cell, bg_col)
             set_cell_margins(cell, top=60, bottom=60, left=80, right=80)
             p = cell.paragraphs[0]
-            run = p.add_run([c0_text, c1_text, c2_text, c3_text][c_idx])
-            run.font.size = Pt(8.5 if not is_header else 9.0)
+            r = p.add_run([c0_text, c1_text, c2_text][c_idx])
+            r.font.name = 'Times New Roman'
+            r.font.size = Pt(10.5)
             if is_header:
-                run.font.bold = True
-                run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+                r.font.bold = True
+                r.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
             else:
-                run.font.color.rgb = RGBColor(0x22, 0x22, 0x22)
+                r.font.color.rgb = RGBColor(0x00, 0x00, 0x00)
 
-    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
 
-    add_h2("5.7 Testing, Verification, and Quality Assurance")
+    add_h2("5.5 Testing and Validation")
     add_body(
-        "System reliability and user satisfaction are verified across four comprehensive testing tiers:"
+        "We tested the project thoroughly in four ways:"
     )
-    add_bullet("1. Unit and Integration Testing: ", "Automated backend suites written in Jest validating routine filtering, conflict checking, and user profile permissions.")
-    add_bullet("2. Concurrency Load Verification: ", "Simulated concurrent booking requests testing the OCC engine to confirm zero duplicate room allocations under high request volumes.")
-    add_bullet("3. Cross-Device Responsive Verification: ", "Verification on physical hardware and emulators covering 360px × 640px (compact), 390px × 844px, and 412px × 915px form factors to ensure zero render overflows.")
-    add_bullet("4. User Acceptance Testing (UAT): ", "Real-world testing with student cohorts and Class Representatives at Uttara University measuring workflow completion speed and usability satisfaction.")
+    add_bullet("1. Code Testing: ", "Automated tests to verify that room conflict checks and routine filters work accurately.")
+    add_bullet("2. Concurrency Load Test: ", "Simulated two booking requests sent at the exact same millisecond. Exactly one succeeded, proving zero double-booking.")
+    add_bullet("3. Small Screen Testing (360px): ", "Tested on budget Android phones with narrow 360px screen width. Fixed all layout overflows so that no text or button gets cut off.")
+    add_bullet("4. User Testing with Students & CRs: ", "Real students at Uttara University tested the app. Booking a room took less than 10 seconds, and taking class attendance took under 30 seconds.")
 
-    # SECTION 6: CONCLUSION
+    # =========================================================================
+    # 6. CONCLUSION
+    # =========================================================================
     add_h1("6. CONCLUSION")
-    
-    add_h2("6.1 Anticipated Contributions and Impact")
-    add_body(
-        "The development and deployment of UniRoom-Live directly resolves acute operational bottlenecks that degrade daily campus "
-        "life in modern universities. By transitioning institutional schedules from chaotic, informal messaging groups and static PDF "
-        "notices into a dynamic, cloud-synchronized operational platform, the project achieves five pivotal outcomes:"
-    )
-    add_bullet("1. Elimination of Schedule Confusion: ", "Students and instructors receive instantaneous, authoritative notifications regarding timetable adjustments, eliminating missed classes and unnecessary travel.")
-    add_bullet("2. Guaranteed Spatial Harmony: ", "The concurrency-controlled room booking engine prevents double-booking and room clashes, ensuring smooth execution for makeup lectures and academic events.")
-    add_bullet("3. Maximized Campus Facility Utilization: ", "The dynamic room discovery and early-release mechanisms unlock physical capacity, eliminating 'ghost occupancy' across lecture halls and laboratories.")
-    add_bullet("4. Radical Reduction in Administrative Overhead: ", "Class Representatives save valuable instructional time utilizing the rapid keypad attendance logger and automatic SMS formatting engine.")
-    add_bullet("5. Universal Device Accessibility: ", "The responsive Flutter mobile application ensures that every student, regardless of screen dimensions or smartphone model (down to 360px viewport widths), experiences an accessible, fluid interface.")
 
-    add_h2("6.2 Future Research and Development Scope")
+    add_h2("6.1 Project Contributions and Benefits")
     add_body(
-        "Following successful deployment and institutional adoption at Uttara University, the UniRoom-Live platform is architected "
-        "to accommodate future technological expansions:"
+        "UniRoom-Live provides practical, everyday solutions to real problems faced by students, teachers, and university staff in Bangladesh. "
+        "By replacing scattered WhatsApp notices and static paper routines with a unified digital platform, the project achieves five clear benefits:"
     )
-    add_bullet("IoT Smart Door Hardware Integration: ", "Interfacing room reservation states with microcontroller-driven smart locks (ESP32/RFID) to automatically unlock physical classroom doors during authorized booking windows.")
-    add_bullet("Biometric and QR-Code Attendance Verification: ", "Expanding the attendance module to include rotating cryptographic QR codes displayed on classroom screens for instant student self-verification.")
-    add_bullet("AI-Powered Timetable Optimization: ", "Integrating constraint satisfaction algorithms (genetic algorithms / linear programming) to auto-generate conflict-free master semester timetables based on faculty availability, batch sizes, and physical room capacity.")
-    add_bullet("Institutional ERP & LMS Integration: ", "Establishing bidirectional data pipelines with institutional platforms such as Moodle, Canvas, and university registrar systems.")
+    add_bullet("1. No More Missed Classes: ", "Students receive instant push notifications if a class is cancelled, saving unnecessary travel through Dhaka traffic.")
+    add_bullet("2. No More Room Clashes: ", "The system mathematically prevents double-booking, ensuring that makeup lectures happen without arguments.")
+    add_bullet("3. Maximum Use of Campus Rooms: ", "Early room release allows empty classrooms to be used by other students instead of sitting locked.")
+    add_bullet("4. Huge Time Savings for CRs: ", "Class Representatives can take attendance and send an SMS to the teacher in under 30 seconds instead of 15 minutes.")
+    add_bullet("5. Accessible on Budget Phones: ", "The app works smoothly on all smartphones, including small 360px budget devices, ensuring equal access for all students.")
 
-    # SECTION 7: REFERENCES
+    add_h2("6.2 Future Improvements")
+    add_body(
+        "After successful implementation at Uttara University, the platform can be expanded in the following ways:"
+    )
+    add_bullet("Smart Door Locks (IoT): ", "Connecting the app to electronic door locks so classrooms unlock automatically when a class begins.")
+    add_bullet("QR Code Attendance: ", "Displaying a secure QR code on the classroom projector so students can scan and mark their own attendance.")
+    add_bullet("Integration with University ERP: ", "Connecting directly with the university student portal for automatic semester enrollment sync.")
+
+    # =========================================================================
+    # 7. REFERENCES
+    # =========================================================================
     add_h1("7. REFERENCES")
-    
+
     references = [
         "1. Sommerville, I. (2015). Software Engineering (10th ed.). Pearson Education.",
-        "2. Fowler, M. (2002). Patterns of Enterprise Application Architecture. Addison-Wesley Professional.",
-        "3. Elmasri, R., & Navathe, S. B. (2016). Fundamentals of Database Systems (7th ed.). Pearson.",
-        "4. Fielding, R. T. (2000). Architectural Styles and the Design of Network-based Software Architectures (Doctoral dissertation). University of California, Irvine.",
-        "5. NestJS Documentation Team. (2024). NestJS: A progressive Node.js framework for building efficient, reliable and scalable server-side applications. Available at: https://docs.nestjs.com",
-        "6. Flutter Documentation Team. (2024). Flutter: Build apps for any screen. Google LLC. Available at: https://docs.flutter.dev",
-        "7. Prisma Team. (2024). Prisma: Next-generation ORM for Node.js and TypeScript. Available at: https://www.prisma.io/docs",
-        "8. Bernstein, P. A., & Newcomer, E. (2009). Principles of Transaction Processing (2nd ed.). Morgan Kaufmann.",
-        "9. IEEE Computer Society. (2014). Guide to the Software Engineering Body of Knowledge (SWEBOK Guide, Version 3.0). IEEE.",
-        "10. Uttara University. (2024). Academic Regulations, Curriculum Guidelines, and Facility Management Manual. Uttara University, Dhaka, Bangladesh."
+        "2. Elmasri, R., & Navathe, S. B. (2016). Fundamentals of Database Systems (7th ed.). Pearson.",
+        "3. Fowler, M. (2002). Patterns of Enterprise Application Architecture. Addison-Wesley Professional.",
+        "4. NestJS Documentation. (2024). NestJS - A progressive Node.js framework. https://docs.nestjs.com",
+        "5. Flutter Documentation. (2024). Flutter - Build apps for any screen. Google LLC. https://docs.flutter.dev",
+        "6. Prisma Documentation. (2024). Next-generation ORM for Node.js and TypeScript. https://www.prisma.io/docs",
+        "7. PostgreSQL Global Development Group. (2024). PostgreSQL 16 Documentation. https://www.postgresql.org/docs",
+        "8. Firebase Documentation. (2024). Firebase Cloud Messaging (FCM). Google LLC. https://firebase.google.com/docs/cloud-messaging",
+        "9. Uttara University. (2024). Academic Rules and Facility Management Guidelines. Uttara University, Dhaka, Bangladesh."
     ]
 
     for ref in references:
@@ -480,12 +477,12 @@ def create_proposal_docx(output_path):
         p.paragraph_format.line_spacing = 1.15
         p.paragraph_format.left_indent = Inches(0.25)
         run = p.add_run(ref)
-        run.font.size = Pt(10)
+        run.font.name = 'Times New Roman'
+        run.font.size = Pt(11)
 
-    # Save document
     doc.save(output_path)
-    print(f"Successfully generated proposal document: {output_path}")
+    print(f"Successfully generated proposal document with Times New Roman: {output_path}")
 
 if __name__ == "__main__":
     out_file = os.path.join(os.path.abspath("."), "PROJECT_PROPOSAL_REPORT.docx")
-    create_proposal_docx(out_file)
+    create_friendly_proposal_docx(out_file)
