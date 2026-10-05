@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   Calendar,
+  Terminal,
   Sparkles,
   Upload,
   FileCode,
@@ -17,9 +18,6 @@ import {
   Plus,
   X,
   FileText,
-  KeyRound,
-  Eye,
-  EyeOff,
   Clock,
   ArrowRight,
   Filter,
@@ -40,12 +38,14 @@ import FULL_CSE_DATASET from '../data/cse_fall_2026_full_routine.json';
 export const RoutinePage: React.FC = () => {
   const { selectedUniversity } = useAuth();
 
-  // Navigation Tabs: 'ai' | 'json' | 'active'
-  const [activeTab, setActiveTab] = useState<'ai' | 'json' | 'active'>(() => {
-    return (localStorage.getItem('uniroom_routine_active_tab') as 'ai' | 'json' | 'active') || 'active';
+  // Navigation Tabs: 'python' | 'json' | 'active'
+  const [activeTab, setActiveTab] = useState<'python' | 'json' | 'active'>(() => {
+    const saved = localStorage.getItem('uniroom_routine_active_tab');
+    if (saved === 'ai' || saved === 'python') return 'python';
+    return (saved as 'python' | 'json' | 'active') || 'python';
   });
 
-  const handleSelectTab = (tab: 'ai' | 'json' | 'active') => {
+  const handleSelectTab = (tab: 'python' | 'json' | 'active') => {
     setActiveTab(tab);
     localStorage.setItem('uniroom_routine_active_tab', tab);
   };
@@ -54,10 +54,8 @@ export const RoutinePage: React.FC = () => {
   const [depts, setDepts] = useState<DepartmentItem[]>([]);
   const [targetDept, setTargetDept] = useState<string>('CSE');
 
-  // File Upload State (Mode A)
+  // File Upload State (Deterministic Python Script Parser)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [customApiKey, setCustomApiKey] = useState<string>('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
 
   // JSON Ingestion State (Mode B)
@@ -183,11 +181,11 @@ export const RoutinePage: React.FC = () => {
     triggerValidation(stagedSlots);
   }, [stagedSlots, targetDept]);
 
-  // Mode A: File Upload AI Parse
+  // Deterministic Python File Upload Parser
   const handleParseFile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      setErrorMsg('Please select a timetable PDF or image file first.');
+      setErrorMsg('Please select a timetable PDF file first.');
       return;
     }
 
@@ -201,19 +199,19 @@ export const RoutinePage: React.FC = () => {
     formData.append('department', targetDept);
 
     try {
-      const res = await schedulesApi.parseRoutineFile(formData, customApiKey || undefined);
+      const res = await schedulesApi.parseRoutineFile(formData);
       setStagedSlots(res.parsedRoutine.slots || []);
       setValidationReport(res.validationReport);
       setJsonInput(JSON.stringify(res.parsedRoutine, null, 2));
       setSuccessMsg(
-        `Successfully extracted ${res.parsedRoutine.slots.length} schedule slots with AI!`,
+        `Successfully extracted ${res.parsedRoutine.slots.length} schedule slots with Python script!`,
       );
       handleSelectTab('json');
     } catch (err: any) {
-      console.error('AI parse failed:', err);
+      console.error('Python parse failed:', err);
       setErrorMsg(
         err.response?.data?.message ||
-          'Failed to parse file. Verify Gemini API key or use Mode B (JSON Paste).',
+          'Failed to parse PDF file. Please ensure it is a valid university timetable PDF table.',
       );
     } finally {
       setIsParsing(false);
@@ -536,7 +534,7 @@ export const RoutinePage: React.FC = () => {
             <span>Routine Parser & Ingestion Center</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Automated AI document parsing, mathematical collision detection, and atomic timetable hydration.
+            Deterministic Python PDF document parsing, mathematical collision detection, and atomic timetable hydration.
           </p>
         </div>
 
@@ -597,6 +595,18 @@ export const RoutinePage: React.FC = () => {
       {/* Mode Navigation Tabs */}
       <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-2xl w-fit">
         <button
+          onClick={() => handleSelectTab('python')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === 'python'
+              ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Terminal className="w-4 h-4" />
+          <span>Python Script Parser</span>
+        </button>
+
+        <button
           onClick={() => handleSelectTab('json')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             activeTab === 'json'
@@ -605,19 +615,7 @@ export const RoutinePage: React.FC = () => {
           }`}
         >
           <FileCode className="w-4 h-4" />
-          <span>JSON & External AI Ingest</span>
-        </button>
-
-        <button
-          onClick={() => handleSelectTab('ai')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === 'ai'
-              ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Automated AI File Parser</span>
+          <span>JSON Direct Ingest & Master Dataset</span>
         </button>
 
         <button
@@ -633,22 +631,21 @@ export const RoutinePage: React.FC = () => {
         </button>
       </div>
 
-      {/* TAB 1: AI FILE PARSER (MODE A) */}
-      {/* TAB 1: AI & DETERMINISTIC FILE PARSER (MODE A) */}
-      {activeTab === 'ai' && (
+      {/* TAB 1: DETERMINISTIC PYTHON FILE PARSER */}
+      {activeTab === 'python' && (
         <div className="p-6 bg-slate-900/60 border border-slate-800/80 rounded-3xl space-y-5 shadow-xl">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2.5">
               <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span>Automated Timetable Parser Engine</span>
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span>Deterministic Python Routine Parser (pdfplumber)</span>
               </h3>
               <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 text-[11px] font-bold rounded-lg border border-emerald-500/20">
-                ⚡ Python Table Extractor + AI Fallback
+                ⚡ 100% Local Script • No AI Key Required
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Upload your official timetable PDF or image. Official PDF tables are processed by our high-precision deterministic Python extractor (100% exact, $0 API cost). Photos and scans automatically fall back to Gemini 2.0 Flash AI.
+              Upload your official timetable PDF (e.g. <code className="text-emerald-400">routine_cse.pdf</code>). Our high-precision Python script extracts all schedule slots, rooms, and batches automatically without any external AI service or API key.
             </p>
           </div>
 
@@ -658,7 +655,7 @@ export const RoutinePage: React.FC = () => {
               <input
                 type="file"
                 id="routineFile"
-                accept=".pdf,image/*"
+                accept=".pdf"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     setSelectedFile(e.target.files[0]);
@@ -671,56 +668,34 @@ export const RoutinePage: React.FC = () => {
                   <Upload className="w-6 h-6" />
                 </div>
                 <div className="text-xs font-bold text-slate-200">
-                  {selectedFile ? selectedFile.name : 'Click to select or drag and drop routine file'}
+                  {selectedFile ? selectedFile.name : 'Click to select or drag and drop routine PDF file'}
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Supports PDF documents, PNG, JPG, or screenshot pages (up to 20MB)
+                  Accepts official timetable PDF documents (up to 25MB)
                 </p>
               </label>
             </div>
 
-            {/* Optional Custom Gemini Key */}
-            <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Google Gemini API Key (Optional AI Fallback)</span>
-                </div>
-                <span className="text-[10px] text-slate-500">Not needed for PDFs parsed with Python</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+              <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                <span>Powered by <span className="text-slate-300 font-mono">scripts/parse_routine_pdf.py</span> &amp; <span className="text-slate-300 font-mono">pdfplumber</span></span>
               </div>
-              <div className="relative">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={customApiKey}
-                  onChange={(e) => setCustomApiKey(e.target.value)}
-                  placeholder="Paste your Gemini Flash API key (if parsing scanned photos)..."
-                  className="w-full px-3.5 py-2 pr-10 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                >
-                  {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
 
-            <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={isParsing || !selectedFile}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-emerald-500/20 cursor-pointer transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs shadow-lg shadow-emerald-500/20 cursor-pointer transition-all"
               >
                 {isParsing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Extracting Timetable Slots...</span>
+                    <span>Executing Python Parser...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Extract & Parse Timetable</span>
+                    <Terminal className="w-4 h-4" />
+                    <span>Extract Timetable with Python</span>
                   </>
                 )}
               </button>

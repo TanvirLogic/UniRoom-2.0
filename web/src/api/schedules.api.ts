@@ -94,18 +94,14 @@ export interface ScheduleSlotRecord {
 
 export const schedulesApi = {
   /**
-   * Parse a timetable file (PDF or Image) using the backend AI parsing engine
+   * Parse a timetable PDF using the backend Python parsing engine
    */
   parseRoutineFile: async (
     formData: FormData,
-    customApiKey?: string,
   ): Promise<{ parsedRoutine: IngestRoutineData; validationReport: ValidationReport }> => {
     const headers: Record<string, string> = {
       'Content-Type': 'multipart/form-data',
     };
-    if (customApiKey) {
-      headers['x-gemini-key'] = customApiKey;
-    }
     const res = await apiClient.post('/admin/schedules/parse-file', formData, { headers });
     return res.data;
   },

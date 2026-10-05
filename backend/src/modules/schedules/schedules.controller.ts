@@ -36,14 +36,14 @@ export class SchedulesController {
   ) {}
 
   /**
-   * 1. Mode A: Parse Timetable File (PDF / Image) using AI Multimodal Document Parser
+   * 1. Parse Timetable File (PDF) using Deterministic Python Script (pdfplumber)
    */
   @Post('admin/schedules/parse-file')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Super Admin: Parse timetable PDF or Image into structured slots using AI' })
+  @ApiOperation({ summary: 'Super Admin: Parse timetable PDF into structured slots using deterministic Python script' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -60,10 +60,9 @@ export class SchedulesController {
     @UploadedFile() file: { buffer: Buffer; mimetype: string; originalname?: string },
     @Body('university') university?: string,
     @Body('department') department?: string,
-    @Headers('x-gemini-key') customApiKey?: string,
   ) {
     if (!file) {
-      throw new BadRequestException('Timetable file (PDF or Image) is required.');
+      throw new BadRequestException('Timetable PDF file is required.');
     }
 
     const parsed = await this.routineParserService.parseDocument(
@@ -71,7 +70,6 @@ export class SchedulesController {
       file.mimetype,
       university || 'UU',
       department || 'CSE',
-      customApiKey,
     );
 
     // Automatically run pre-flight collision checks on the extracted slots
