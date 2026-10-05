@@ -1,25 +1,36 @@
 import { Controller, Get, Post, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../modules/email/email.service';
 import { PushNotificationService } from '../modules/notifications/push-notification.service';
 
 class TestEmailDto {
   @ApiProperty({ example: 'admin@uttara.edu.bd', description: 'Target email address for test message' })
+  @IsNotEmpty()
+  @IsEmail()
   email!: string;
 }
 
 class TestPushDto {
   @ApiProperty({ example: 'test_channel', required: false, description: 'FCM topic name to broadcast to' })
+  @IsOptional()
+  @IsString()
   topic?: string;
 
   @ApiProperty({ example: '', required: false, description: 'Direct device token' })
+  @IsOptional()
+  @IsString()
   token?: string;
 
   @ApiProperty({ example: 'Test Notification', required: false })
+  @IsOptional()
+  @IsString()
   title?: string;
 
   @ApiProperty({ example: 'Testing push delivery from UniRoom-Live 2.0', required: false })
+  @IsOptional()
+  @IsString()
   body?: string;
 }
 
