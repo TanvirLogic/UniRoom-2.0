@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: (pip install pdfplumber || pip3 install pdfplumber || true) && npm install && npx prisma generate && npm run build
+    buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /api/v1/health
     envVars:

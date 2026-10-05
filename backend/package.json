@@ -16,8 +16,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts",
-    "postinstall": "pip install pdfplumber || pip3 install pdfplumber || python3 -m pip install pdfplumber || true"
+    "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.7",
@@ -35,6 +34,7 @@
     "nodemailer": "^10.0.10",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdf-parse": "^2.4.5",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1"
@@ -47,6 +47,7 @@
     "@types/node": "^20.12.7",
     "@types/nodemailer": "^8.0.2",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pdf-parse": "^1.1.5",
     "prisma": "^5.12.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
