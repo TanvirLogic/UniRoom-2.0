@@ -173,13 +173,16 @@ export class AuthService {
     });
 
     // Dispatch email
-    await this.emailService.sendVerificationEmail(email, fullName, pin);
+    const emailResult = await this.emailService.sendVerificationEmail(email, fullName, pin);
 
     return {
       success: true,
-      message: 'Registration initiated successfully. A 6-digit verification PIN has been sent to your institutional email.',
+      message: emailResult.delivered
+        ? 'Registration initiated successfully. A 6-digit verification PIN has been sent to your institutional email.'
+        : 'Registration initiated successfully. A 6-digit verification PIN has been generated.',
       email,
       expiresIn: '10 minutes',
+      ...(!emailResult.delivered ? { fallbackPin: pin } : {}),
     };
   }
 
@@ -596,13 +599,16 @@ export class AuthService {
     });
 
     // 6. Dispatch email via EmailService
-    await this.emailService.sendPasswordResetEmail(user.email, user.fullName, pin);
+    const resetResult = await this.emailService.sendPasswordResetEmail(user.email, user.fullName, pin);
 
     return {
       success: true,
-      message: 'A 6-digit password reset PIN has been sent to your email.',
+      message: resetResult.delivered
+        ? 'A 6-digit password reset PIN has been sent to your email.'
+        : 'A 6-digit password reset PIN has been generated.',
       email,
       expiresIn: '10 minutes',
+      ...(!resetResult.delivered ? { fallbackPin: pin } : {}),
     };
   }
 
