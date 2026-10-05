@@ -31,3 +31,7 @@ services:
         sync: false
       - key: EMAIL_FROM
         value: "UniRoom-Live <no-reply@uniroom.live>"
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false

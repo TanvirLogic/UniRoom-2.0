@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "generate:firebase-env": "node scripts/generate-firebase-env.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.7",

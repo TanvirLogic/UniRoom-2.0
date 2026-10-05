@@ -8,31 +8,132 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private readonly emailFrom: string;
 
+  private readonly host: string;
+  private readonly port: number;
+  private readonly secure: boolean;
+  private readonly user: string;
+
   constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
-    const port = Number(this.configService.get<number>('SMTP_PORT', 465));
-    const secure = this.configService.get<string>('SMTP_SECURE', 'true') === 'true' || port === 465;
+    this.host = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
+    this.port = Number(this.configService.get<number>('SMTP_PORT', 465));
+    const secureVal = this.configService.get<string>('SMTP_SECURE');
+    this.secure = secureVal !== undefined ? (secureVal === 'true' || secureVal === '1') : this.port === 465;
+
     const rawUser = this.configService.get<string>('SMTP_USER', '');
     const rawPass = this.configService.get<string>('SMTP_PASS', '');
-    const user = rawUser.replace(/["']/g, '').trim();
+    this.user = rawUser.replace(/["']/g, '').trim();
     const pass = rawPass.replace(/["'\s]/g, '').trim();
     this.emailFrom = this.configService.get<string>('EMAIL_FROM', 'UniRoom-Live <no-reply@uniroom.live>');
 
-    if (user && pass) {
+    if (this.user && pass) {
       this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
+        host: this.host,
+        port: this.port,
+        secure: this.secure,
         auth: {
-          user,
+          user: this.user,
           pass,
         },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
       });
-      this.logger.log(`[EmailService] Configured SMTP transporter with host ${host}:${port} (User: ${user})`);
+      this.logger.log(`[EmailService] Configured SMTP transporter with host ${this.host}:${this.port} (secure: ${this.secure}, User: ${this.user})`);
     } else {
       this.logger.warn(
         '[EmailService] SMTP credentials (SMTP_USER / SMTP_PASS) not fully set in .env. Verification PINs will be printed to server console.',
       );
+    }
+  }
+
+  /**
+   * Get current SMTP service status and masked telemetry
+   */
+  getStatus() {
+    const isConfigured = !!(this.transporter && this.user);
+    const maskedUser = this.user
+      ? this.user.includes('@')
+        ? `${this.user.split('@')[0].slice(0, 3)}***@${this.user.split('@')[1]}`
+        : `${this.user.slice(0, 3)}***`
+      : 'not set';
+
+    return {
+      isConfigured,
+      host: this.host,
+      port: this.port,
+      secure: this.secure,
+      user: maskedUser,
+      from: this.emailFrom,
+    };
+  }
+
+  /**
+   * Verify SMTP connection with the configured mail server
+   */
+  async verifyConnection(): Promise<{ success: boolean; message: string }> {
+    if (!this.transporter) {
+      return {
+        success: false,
+        message: 'SMTP credentials (SMTP_USER / SMTP_PASS) are not set. Configure them in environment variables.',
+      };
+    }
+
+    try {
+      await this.transporter.verify();
+      return {
+        success: true,
+        message: `Successfully connected to SMTP server (${this.host}:${this.port}). Ready to deliver emails.`,
+      };
+    } catch (error: any) {
+      this.logger.error(`[EmailService] SMTP verification failed: ${error.message}`);
+      return {
+        success: false,
+        message: `SMTP connection failed: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Send a test email to verify delivery
+   */
+  async sendTestEmail(to: string): Promise<{ success: boolean; message: string; messageId?: string }> {
+    if (!this.transporter) {
+      return {
+        success: false,
+        message: 'SMTP transporter not initialized. Configure SMTP_USER and SMTP_PASS on Render dashboard.',
+      };
+    }
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: this.emailFrom,
+        to,
+        subject: 'UniRoom-Live 2.0 - SMTP Test Email',
+        html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #059669; margin-top: 0; font-size: 20px;">🎉 Email Service Operational!</h2>
+            <p style="color: #334155; font-size: 14px; line-height: 1.5;">This is a test email sent from <strong>UniRoom-Live 2.0</strong> to confirm that production SMTP mail delivery is working perfectly.</p>
+            <div style="background: #f8fafc; border-left: 4px solid #059669; padding: 12px; margin: 16px 0; font-size: 13px; color: #475569;">
+              <strong>Host:</strong> ${this.host}:${this.port}<br/>
+              <strong>Sender:</strong> ${this.emailFrom}
+            </div>
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 20px;">Sent at: ${new Date().toUTCString()}</p>
+          </div>
+        `,
+      });
+
+      this.logger.log(`[EmailService] Test email dispatched successfully to ${to} (MessageId: ${info.messageId})`);
+      return {
+        success: true,
+        message: `Test email dispatched successfully to ${to}!`,
+        messageId: info.messageId,
+      };
+    } catch (error: any) {
+      this.logger.error(`[EmailService] Test email delivery failed to ${to}: ${error.message}`, error.stack);
+      return {
+        success: false,
+        message: `Test email delivery failed: ${error.message}`,
+      };
     }
   }
 
