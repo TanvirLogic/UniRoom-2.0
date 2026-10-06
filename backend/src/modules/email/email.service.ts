@@ -23,8 +23,10 @@ export class EmailService {
   private readonly user: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.brevoApiKey = this.configService.get<string>('BREVO_API_KEY', '').trim() || null;
-    this.resendApiKey = this.configService.get<string>('RESEND_API_KEY', '').trim() || null;
+    const rawBrevo = this.configService.get<string>('BREVO_API_KEY', '');
+    const rawResend = this.configService.get<string>('RESEND_API_KEY', '');
+    this.brevoApiKey = rawBrevo ? rawBrevo.replace(/["']/g, '').trim() || null : null;
+    this.resendApiKey = rawResend ? rawResend.replace(/["']/g, '').trim() || null : null;
     this.host = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
     this.port = Number(this.configService.get<number>('SMTP_PORT', 465));
     const secureVal = this.configService.get<string>('SMTP_SECURE');
@@ -65,9 +67,9 @@ export class EmailService {
       this.logger.log(`[EmailService] Configured SMTP transporter with host ${this.host}:${this.port} (secure: ${this.secure}, IPv4 forced, User: ${this.user})`);
     }
 
-    if (!this.resendApiKey && (!this.user || !pass)) {
+    if (!this.brevoApiKey && !this.resendApiKey && (!this.user || !pass)) {
       this.logger.warn(
-        '[EmailService] No active email provider (neither RESEND_API_KEY nor SMTP credentials). Verification PINs will be printed to server console.',
+        '[EmailService] No active email provider (neither BREVO_API_KEY, RESEND_API_KEY nor SMTP credentials). Verification PINs will be printed to server console.',
       );
     }
   }
@@ -80,8 +82,10 @@ export class EmailService {
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.brevoApiKey) return { success: false, error: 'No Brevo API Key configured' };
     try {
-      const senderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL') || this.user || 'bmwthriad2023@gmail.com';
-      const senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'UniRoom-Live 2.0';
+      const rawSenderEmail = this.configService.get<string>('BREVO_SENDER_EMAIL', '') || this.user || 'bmwthriad2023@gmail.com';
+      const senderEmail = rawSenderEmail.replace(/["']/g, '').trim();
+      const rawSenderName = this.configService.get<string>('BREVO_SENDER_NAME', '') || 'UniRoom-Live 2.0';
+      const senderName = rawSenderName.replace(/["']/g, '').trim();
 
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -98,12 +102,22 @@ export class EmailService {
         }),
       });
 
-      const data: any = await response.json();
+      const rawText = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        data = { message: rawText };
+      }
+
       if (!response.ok) {
-        throw new Error(data.message || `Brevo returned HTTP ${response.status}`);
+        const errorDetail = data.message || data.error || rawText || `HTTP ${response.status}`;
+        this.logger.error(`[EmailService] Brevo API error (${response.status}): ${errorDetail}`);
+        return { success: false, error: `Brevo (HTTP ${response.status}): ${errorDetail}` };
       }
       return { success: true, messageId: data.messageId };
     } catch (err: any) {
+      this.logger.error(`[EmailService] Brevo exception: ${err.message}`);
       return { success: false, error: err.message };
     }
   }
@@ -115,7 +129,8 @@ export class EmailService {
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.resendApiKey) return { success: false, error: 'No Resend API Key configured' };
     try {
-      const fromAddress = this.configService.get<string>('RESEND_FROM') || 'UniRoom-Live <onboarding@resend.dev>';
+      const rawFrom = this.configService.get<string>('RESEND_FROM', '') || 'UniRoom-Live <onboarding@resend.dev>';
+      const fromAddress = rawFrom.replace(/["']/g, '').trim();
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -130,12 +145,22 @@ export class EmailService {
         }),
       });
 
-      const data: any = await response.json();
+      const rawText = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        data = { message: rawText };
+      }
+
       if (!response.ok) {
-        throw new Error(data.message || `Resend returned HTTP ${response.status}`);
+        const errorDetail = data.message || data.error || rawText || `HTTP ${response.status}`;
+        this.logger.error(`[EmailService] Resend API error (${response.status}): ${errorDetail}`);
+        return { success: false, error: `Resend (HTTP ${response.status}): ${errorDetail}` };
       }
       return { success: true, messageId: data.id };
     } catch (err: any) {
+      this.logger.error(`[EmailService] Resend exception: ${err.message}`);
       return { success: false, error: err.message };
     }
   }
@@ -177,17 +202,77 @@ export class EmailService {
    */
   async verifyConnection(): Promise<{ success: boolean; message: string }> {
     if (this.brevoApiKey) {
-      return {
-        success: true,
-        message: 'Brevo HTTP API key is configured and ready for outbound HTTPS dispatch (Port 443).',
-      };
+      try {
+        const res = await fetch('https://api.brevo.com/v3/account', {
+          headers: {
+            'api-key': this.brevoApiKey,
+            Accept: 'application/json',
+          },
+        });
+        const raw = await res.text();
+        let data: any = {};
+        try { data = JSON.parse(raw); } catch { data = { message: raw }; }
+
+        if (res.ok) {
+          const accountEmail = data.email || 'Verified';
+          const senderEmail = (this.configService.get<string>('BREVO_SENDER_EMAIL', '') || this.user || 'bmwthriad2023@gmail.com').replace(/["']/g, '').trim();
+          
+          // Optionally check senders list
+          let sendersMsg = '';
+          try {
+            const sendersRes = await fetch('https://api.brevo.com/v3/senders', {
+              headers: { 'api-key': this.brevoApiKey, Accept: 'application/json' },
+            });
+            if (sendersRes.ok) {
+              const sendersData: any = await sendersRes.json();
+              const verifiedList = (sendersData.senders || [])
+                .filter((s: any) => s.active)
+                .map((s: any) => s.email);
+              sendersMsg = ` (Verified senders in Brevo: ${verifiedList.join(', ') || 'none'})`;
+            }
+          } catch {}
+
+          return {
+            success: true,
+            message: `Brevo HTTP API verified! Account: ${accountEmail}, outbound sender: ${senderEmail}.${sendersMsg}`,
+          };
+        } else {
+          return {
+            success: false,
+            message: `Brevo API authentication rejected (${res.status}): ${data.message || raw}. Please check BREVO_API_KEY in Render.`,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Brevo connection failed: ${err.message}`,
+        };
+      }
     }
 
     if (this.resendApiKey) {
-      return {
-        success: true,
-        message: 'Resend HTTP API key is configured and ready for outbound HTTPS dispatch (Port 443).',
-      };
+      try {
+        const res = await fetch('https://api.resend.com/api-keys', {
+          headers: { Authorization: `Bearer ${this.resendApiKey}` },
+        });
+        if (res.ok) {
+          return {
+            success: true,
+            message: 'Resend HTTP API key is verified and active (Port 443).',
+          };
+        } else {
+          const data: any = await res.json().catch(() => ({}));
+          return {
+            success: false,
+            message: `Resend API check failed (${res.status}): ${data.message || res.statusText}`,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: `Resend connection failed: ${err.message}`,
+        };
+      }
     }
 
     if (!this.transporter) {
@@ -228,6 +313,8 @@ export class EmailService {
       </div>
     `;
 
+    const errors: string[] = [];
+
     if (this.brevoApiKey) {
       const brevoRes = await this.sendViaBrevo(to, 'Test User', subject, html);
       if (brevoRes.success) {
@@ -237,6 +324,7 @@ export class EmailService {
           messageId: brevoRes.messageId,
         };
       }
+      errors.push(brevoRes.error || 'Brevo dispatch failed');
     }
 
     if (this.resendApiKey) {
@@ -248,6 +336,7 @@ export class EmailService {
           messageId: resendRes.messageId,
         };
       }
+      errors.push(resendRes.error || 'Resend dispatch failed');
     }
 
     if (this.transporter) {
@@ -264,16 +353,13 @@ export class EmailService {
           messageId: info.messageId,
         };
       } catch (error: any) {
-        return {
-          success: false,
-          message: `SMTP delivery failed (${error.message}). Tip: On Render Free tier, set BREVO_API_KEY or RESEND_API_KEY in Render environment.`,
-        };
+        errors.push(`SMTP (${this.host}:${this.port}): ${error.message}`);
       }
     }
 
     return {
       success: false,
-      message: 'No email service configured. Please add BREVO_API_KEY, RESEND_API_KEY or SMTP credentials.',
+      message: `Delivery failed across all providers: ${errors.join(' | ') || 'No email service configured.'}`,
     };
   }
 
