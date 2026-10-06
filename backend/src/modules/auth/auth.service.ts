@@ -787,11 +787,14 @@ export class AuthService {
       return [];
     }
 
+    const cleanBatch = user.batch.trim();
+    const cleanSection = user.section.trim();
+
     const students = await this.prisma.user.findMany({
       where: {
         departmentId: user.departmentId,
-        batch: user.batch,
-        section: user.section,
+        batch: { equals: cleanBatch, mode: 'insensitive' },
+        section: { equals: cleanSection, mode: 'insensitive' },
         role: { in: [Role.STUDENT, Role.CR] },
       },
       select: {

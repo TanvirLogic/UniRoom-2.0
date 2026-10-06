@@ -62,7 +62,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
   }
 
   /// Load section cohort students
-  Future<void> _loadCohortAndRoster() async {
+  Future<void> _loadCohortAndRoster({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
     final user = context.read<AuthProvider>().user;
     final schedule = context.read<ScheduleProvider>();
@@ -87,6 +87,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
         department: dept,
         batch: batch,
         section: section,
+        forceRefresh: forceRefresh,
       );
       if (mounted) {
         setState(() {
@@ -806,7 +807,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
           IconButton(
             tooltip: 'Refresh Roster',
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadCohortAndRoster,
+            onPressed: () => _loadCohortAndRoster(forceRefresh: true),
           ),
         ],
       ),
@@ -820,32 +821,55 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
                 // 2. Search & Filter Bar
                 _buildSearchAndActionsBar(),
 
-                // 3. Students List (Tappable Cards)
+                // 3. Students List (Tappable Cards with Pull-to-Refresh)
                 Expanded(
-                  child: filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                  child: RefreshIndicator(
+                    color: AppColors.primarySky,
+                    onRefresh: () => _loadCohortAndRoster(forceRefresh: true),
+                    child: filtered.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              const Icon(Icons.search_off_rounded, size: 48, color: AppColors.textSecondary),
-                              const SizedBox(height: 12),
-                              Text(
-                                _searchQuery.isNotEmpty
-                                    ? 'No students found matching "$_searchQuery"'
-                                    : 'No students enrolled in section yet.',
-                                style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                              SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.people_outline_rounded, size: 52, color: AppColors.textSecondary),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _searchQuery.isNotEmpty
+                                          ? 'No students found matching "$_searchQuery"'
+                                          : 'No registered students in $dept Batch $batch ($section) yet.',
+                                      style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primarySky,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                      onPressed: () => _loadCohortAndRoster(forceRefresh: true),
+                                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                                      label: const Text('Refresh from Cloud'),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 96),
+                            itemCount: filtered.length,
+                            itemBuilder: (ctx, index) {
+                              final student = filtered[index];
+                              return _buildStudentCard(student, index + 1);
+                            },
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 96),
-                          itemCount: filtered.length,
-                          itemBuilder: (ctx, index) {
-                            final student = filtered[index];
-                            return _buildStudentCard(student, index + 1);
-                          },
-                        ),
+                  ),
                 ),
               ],
             ),

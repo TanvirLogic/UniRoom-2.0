@@ -20,27 +20,29 @@ class AttendanceService {
       'uniroom_roster_${dept.toUpperCase()}_${batch}_${sec.toUpperCase()}';
 
   /// 1. Fetch Section Students
-  /// Queries backend GET /auth/section-students. If empty or offline,
-  /// falls back to cached roster and defaults.
+  /// Queries backend GET /auth/section-students. Live database records are the ground truth.
   Future<List<SectionStudentModel>> getSectionStudents({
     required String department,
     required String batch,
     required String section,
+    bool forceRefresh = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = _rosterKey(department, batch, section);
 
     List<SectionStudentModel> students = [];
 
-    // Check local cache first
-    final cachedStr = prefs.getString(cacheKey);
-    if (cachedStr != null && cachedStr.isNotEmpty) {
-      try {
-        final List decoded = jsonDecode(cachedStr);
-        students = decoded
-            .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      } catch (_) {}
+    // Check local cache if not forcing refresh
+    if (!forceRefresh) {
+      final cachedStr = prefs.getString(cacheKey);
+      if (cachedStr != null && cachedStr.isNotEmpty) {
+        try {
+          final List decoded = jsonDecode(cachedStr);
+          students = decoded
+              .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
+              .toList();
+        } catch (_) {}
+      }
     }
 
     // Try fetching live roster from backend
@@ -53,7 +55,7 @@ class AttendanceService {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           },
-        ).timeout(const Duration(seconds: 4));
+        ).timeout(const Duration(seconds: 10));
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           final decoded = jsonDecode(response.body);
@@ -66,26 +68,35 @@ class AttendanceService {
                 .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
                 .toList();
 
-            // Merge with local students (preserve any locally added)
-            final idMap = <String, SectionStudentModel>{};
+            // Retain any ongoing attendance selection state (isPresent)
+            final presenceMap = {for (final s in students) s.studentId: s.isPresent};
             for (final s in liveStudents) {
-              idMap[s.studentId] = s;
-            }
-            for (final s in students) {
-              if (!idMap.containsKey(s.studentId)) {
-                idMap[s.studentId] = s;
+              if (presenceMap.containsKey(s.studentId)) {
+                s.isPresent = presenceMap[s.studentId]!;
               }
             }
-            students = idMap.values.toList();
+
+            students = liveStudents;
+
+            // Sort by student roll ID ascending
+            students.sort((a, b) => a.studentId.compareTo(b.studentId));
+
+            // Persist latest live roster to cache
+            await prefs.setString(
+              cacheKey,
+              jsonEncode(students.map((s) => s.toJson()).toList()),
+            );
+
+            return students;
           }
         }
       }
     } catch (_) {
-      // Offline fallback: keep existing students
+      // Offline fallback: keep cached students
     }
 
-    // If still empty or very small, populate default realistic cohort
-    if (students.isEmpty || students.length < 3) {
+    // If still empty (e.g. offline first-launch), use default cohort
+    if (students.isEmpty) {
       students = _getDefaultCohort(department, batch, section);
     }
 
