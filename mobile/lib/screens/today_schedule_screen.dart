@@ -7,6 +7,7 @@ import '../providers/schedule_provider.dart';
 import '../providers/notification_provider.dart';
 import '../services/schedule_service.dart';
 import 'notifications_screen.dart';
+import 'cr_attendance_screen.dart';
 
 class TodayScheduleScreen extends StatefulWidget {
   final VoidCallback? onNavigateToWeekly;
@@ -115,7 +116,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
               if (running != null) ...[
                 _buildSectionHeader('Happening Right Now', Icons.play_circle_fill_rounded, AppColors.success),
                 const SizedBox(height: 8),
-                _buildRunningHeroCard(running, schedule.currentTime),
+                _buildRunningHeroCard(running, schedule.currentTime, user),
                 const SizedBox(height: 20),
               ],
 
@@ -123,7 +124,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
               if (upcoming != null && upcoming.id != running?.id) ...[
                 _buildSectionHeader('Up Next Today', Icons.access_time_filled_rounded, AppColors.warning),
                 const SizedBox(height: 8),
-                _buildUpcomingCard(upcoming, schedule.currentTime),
+                _buildUpcomingCard(upcoming, schedule.currentTime, user),
                 const SizedBox(height: 20),
               ],
 
@@ -246,7 +247,7 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
     );
   }
 
-  Widget _buildRunningHeroCard(ScheduleSlotModel slot, DateTime now) {
+  Widget _buildRunningHeroCard(ScheduleSlotModel slot, DateTime now, dynamic user) {
     final remaining = slot.getMinutesRemaining(now);
 
     return Container(
@@ -385,12 +386,44 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
               ),
             ],
           ),
+          if (user?.isCr == true) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primarySky,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CrAttendanceScreen(
+                        initialCourseCode: slot.courseCode,
+                        initialCourseTitle: slot.courseName,
+                        initialSlot: slot,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.checklist_rtl_rounded, size: 18),
+                label: const Text(
+                  'Take Attendance for this Class',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildUpcomingCard(ScheduleSlotModel slot, DateTime now) {
+  Widget _buildUpcomingCard(ScheduleSlotModel slot, DateTime now, dynamic user) {
     final minsUntil = slot.getMinutesUntilStart(now);
 
     return Container(
@@ -485,10 +518,56 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Teacher: ${slot.facultyInitials} • Floor ${slot.floor ?? "TBA"}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primarySky),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Teacher: ${slot.facultyInitials} • Floor ${slot.floor ?? "TBA"}',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primarySky),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (user?.isCr == true) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CrAttendanceScreen(
+                                initialCourseCode: slot.courseCode,
+                                initialCourseTitle: slot.courseName,
+                                initialSlot: slot,
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.borderSky),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.checklist_rtl_rounded, size: 12, color: AppColors.primarySky),
+                              SizedBox(width: 3),
+                              Text(
+                                'Attendance',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primarySky),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -790,17 +869,64 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             ),
           ],
 
-          // CR Quick Action Bar
+          // CR Quick Action Bar & Attendance
           if (isCrOrFaculty) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (user?.isCr == true && !isCancelled) ...[
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CrAttendanceScreen(
+                            initialCourseCode: slot.courseCode,
+                            initialCourseTitle: slot.courseName,
+                            initialSlot: slot,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isLive ? AppColors.success.withValues(alpha: 0.12) : AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isLive ? AppColors.success.withValues(alpha: 0.3) : AppColors.borderSky,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.checklist_rtl_rounded,
+                            size: 13,
+                            color: isLive ? AppColors.success : AppColors.primarySky,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Take Attendance',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: isLive ? AppColors.success : AppColors.primarySky,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 InkWell(
                   onTap: () => _showCrSlotActionSheet(slot),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(8),
@@ -808,14 +934,14 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.tune_rounded, size: 12, color: AppColors.primarySky),
+                        Icon(Icons.tune_rounded, size: 12, color: AppColors.textSecondary),
                         SizedBox(width: 4),
                         Text(
                           'CR Action',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primarySky,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -901,6 +1027,31 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             ],
 
             if (!slot.isCancelled) ...[
+              ElevatedButton.icon(
+                icon: const Icon(Icons.checklist_rtl_rounded, size: 18),
+                label: const Text('Take Attendance for this Class'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryLight,
+                  foregroundColor: AppColors.primarySky,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.pop(sheetCtx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CrAttendanceScreen(
+                        initialCourseCode: slot.courseCode,
+                        initialCourseTitle: slot.courseName,
+                        initialSlot: slot,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 10),
               ElevatedButton.icon(
                 icon: const Icon(Icons.cancel_outlined, size: 18),
                 label: const Text('Cancel Class for Today'),

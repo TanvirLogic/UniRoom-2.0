@@ -9,8 +9,6 @@ import '../services/notification_service.dart';
 import 'today_schedule_screen.dart';
 import 'weekly_routine_screen.dart';
 import 'cr_command_screen.dart';
-import 'cr_attendance_screen.dart';
-import 'free_rooms_screen.dart';
 import 'faculty_schedule_screen.dart';
 import 'cohort_profile_screen.dart';
 import 'notifications_screen.dart';
@@ -118,43 +116,37 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     final isCompact = screenWidth < 380;
 
     if (isCr) {
-      // CR View: Today Schedule, Attendance, CR Action, Weekly Routine, Free Rooms, Profile
+      // CR View: Today Schedule, CR Action, Weekly Routine, Classroom Hub, Profile
       pages = [
-        TodayScheduleScreen(onNavigateToWeekly: () => _switchTab(3)),
-        const CrAttendanceScreen(),
+        TodayScheduleScreen(onNavigateToWeekly: () => _switchTab(2)),
         const CrCommandScreen(),
         const WeeklyRoutineScreen(),
-        const FreeRoomsScreen(),
+        const StudentClassroomsScreen(),
         const CohortProfileScreen(),
       ];
 
-      destinations = [
-        const NavigationDestination(
+      destinations = const [
+        NavigationDestination(
           icon: Icon(Icons.today_outlined),
           selectedIcon: Icon(Icons.today_rounded),
           label: 'Today',
         ),
         NavigationDestination(
-          icon: const Icon(Icons.checklist_rtl_outlined),
-          selectedIcon: const Icon(Icons.checklist_rtl_rounded),
-          label: isCompact ? 'Attend' : 'Attendance',
-        ),
-        const NavigationDestination(
           icon: Icon(Icons.flash_on_outlined),
           selectedIcon: Icon(Icons.flash_on_rounded),
           label: 'Action',
         ),
-        const NavigationDestination(
+        NavigationDestination(
           icon: Icon(Icons.calendar_month_outlined),
           selectedIcon: Icon(Icons.calendar_month_rounded),
           label: 'Routine',
         ),
-        const NavigationDestination(
-          icon: Icon(Icons.door_front_door_outlined),
-          selectedIcon: Icon(Icons.door_front_door_rounded),
-          label: 'Rooms',
+        NavigationDestination(
+          icon: Icon(Icons.school_outlined),
+          selectedIcon: Icon(Icons.school_rounded),
+          label: 'Classroom',
         ),
-        const NavigationDestination(
+        NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
           selectedIcon: Icon(Icons.person_rounded),
           label: 'Profile',

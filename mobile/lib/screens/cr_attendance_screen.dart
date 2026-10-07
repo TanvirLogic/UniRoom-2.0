@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/constants/app_colors.dart';
 import '../models/section_student_model.dart';
 import '../models/attendance_record_model.dart';
+import '../models/schedule_slot_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../services/attendance_service.dart';
@@ -12,7 +13,16 @@ import '../services/attendance_service.dart';
 /// CR-exclusive Hub for taking daily section attendance, tracking enrolled section mates,
 /// and generating 1-tap plain text ready to copy-paste into personal SMS for faculty.
 class CrAttendanceScreen extends StatefulWidget {
-  const CrAttendanceScreen({super.key});
+  final String? initialCourseCode;
+  final String? initialCourseTitle;
+  final ScheduleSlotModel? initialSlot;
+
+  const CrAttendanceScreen({
+    super.key,
+    this.initialCourseCode,
+    this.initialCourseTitle,
+    this.initialSlot,
+  });
 
   @override
   State<CrAttendanceScreen> createState() => _CrAttendanceScreenState();
@@ -37,6 +47,10 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCourseCode != null && widget.initialCourseCode!.isNotEmpty) {
+      _selectedCourseCode = widget.initialCourseCode!;
+      _selectedCourseTitle = widget.initialCourseTitle ?? widget.initialCourseCode!;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCohortAndRoster();
     });
@@ -792,7 +806,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Section Attendance'),
+        title: Text(widget.initialCourseCode != null ? '${widget.initialCourseCode} Attendance' : 'Section Attendance'),
         actions: [
           IconButton(
             tooltip: 'Attendance History',
