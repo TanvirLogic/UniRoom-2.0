@@ -133,7 +133,6 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
                 teacherCode: teacherCode,
                 dept: dept,
                 courseCount: allClassrooms.length,
-                totalClasses: schedule.allWeeklySlots.length,
                 allClassrooms: allClassrooms,
               ),
               const SizedBox(height: 14),
@@ -224,12 +223,15 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
     required String teacherCode,
     required String dept,
     required int courseCount,
-    required int totalClasses,
     required List<ClassroomCourseModel> allClassrooms,
   }) {
     final allBatches = <String>{};
+    final allSections = <String>{};
     for (final c in allClassrooms) {
       allBatches.addAll(c.batches);
+      for (final cohort in c.distinctCohorts) {
+        allSections.add(cohort.label);
+      }
     }
     final sortedBatches = allBatches.toList()..sort();
 
@@ -299,9 +301,9 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
               ),
               const SizedBox(width: 12),
               _buildStatChip(
-                icon: Icons.schedule_rounded,
-                value: '$totalClasses',
-                label: 'Classes/Wk',
+                icon: Icons.meeting_room_outlined,
+                value: '${allSections.length}',
+                label: 'Sections',
               ),
               const SizedBox(width: 12),
               _buildStatChip(
@@ -365,19 +367,13 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
 
   /// Course Card displaying Course Info and ALL assigned Batches & Sections together
   Widget _buildCourseCard(ClassroomCourseModel course) {
-    final now = DateTime.now();
-    final isRunning = course.isRunningNow(now);
-    final runningSlot = course.runningSlot;
     final distinctCohorts = course.distinctCohorts;
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isRunning ? AppColors.success : AppColors.border,
-          width: isRunning ? 1.5 : 1,
-        ),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -421,44 +417,28 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
                       ),
                     ),
                   ),
-                  if (isRunning)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.success,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'LIVE NOW • Room ${runningSlot?.roomNumber ?? ''}',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Text(
-                      '${course.classesPerWeek} classes / wk',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySky.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
                     ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.school_outlined, size: 12, color: AppColors.primarySky),
+                        SizedBox(width: 4),
+                        Text(
+                          'Classroom',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primarySky,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -546,31 +526,6 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
                       ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // Weekly Routine Schedule Slots Summary
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: course.weeklySlots.take(4).map((slot) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Text(
-                      '${slot.dayOfWeek} ${slot.startTime}${slot.roomNumber != null ? ' (R-${slot.roomNumber})' : ''}',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
               const SizedBox(height: 12),
 

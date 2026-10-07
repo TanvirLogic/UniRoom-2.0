@@ -329,38 +329,28 @@ class _StudentClassroomsScreenState extends State<StudentClassroomsScreen> {
                       ),
                     ),
                     const Spacer(),
-                    if (running)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.circle, color: AppColors.success, size: 8),
-                            SizedBox(width: 5),
-                            Text(
-                              'Live Now',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.success,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Text(
-                        '${course.classesPerWeek} classes/week',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySky.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
                       ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.meeting_room_outlined, size: 12, color: AppColors.primarySky),
+                          SizedBox(width: 4),
+                          Text(
+                            'Classroom',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primarySky,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -389,43 +379,53 @@ class _StudentClassroomsScreenState extends State<StudentClassroomsScreen> {
                   const SizedBox(height: 10),
                 ],
 
-                const Divider(height: 16),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 10),
 
-                // Weekly slots summary preview pills
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: course.weeklySlots.map((slot) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            slot.dayOfWeek,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primarySky,
-                            ),
+                // Bottom Action Bar: Notices, Lectures & Classmates
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.campaign_outlined, size: 14, color: AppColors.textSecondary),
+                        SizedBox(width: 4),
+                        Text(
+                          'Notices',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(Icons.menu_book_outlined, size: 14, color: AppColors.textSecondary),
+                        SizedBox(width: 4),
+                        Text(
+                          'Lectures',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(Icons.people_alt_outlined, size: 14, color: AppColors.textSecondary),
+                        SizedBox(width: 4),
+                        Text(
+                          'Classmates',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: const [
+                        Text(
+                          'Enter',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primarySky,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${slot.startTime} • Rm ${slot.roomNumber ?? "TBA"}',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                        ),
+                        SizedBox(width: 3),
+                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.primarySky),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
