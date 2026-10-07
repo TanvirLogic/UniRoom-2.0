@@ -14,6 +14,7 @@ import 'free_rooms_screen.dart';
 import 'faculty_schedule_screen.dart';
 import 'cohort_profile_screen.dart';
 import 'notifications_screen.dart';
+import 'student_classrooms_screen.dart';
 
 /// MainNavigationShell
 /// Renders a role-tailored bottom navigation shell for Student, CR, and Faculty.
@@ -190,11 +191,11 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         ),
       ];
     } else {
-      // Student View: Today, Weekly Routine, Free Rooms, Profile
+      // Student View: Today, Weekly Routine, Classroom Hub, Profile
       pages = [
         TodayScheduleScreen(onNavigateToWeekly: () => _switchTab(1)),
         const WeeklyRoutineScreen(),
-        const FreeRoomsScreen(),
+        const StudentClassroomsScreen(),
         const CohortProfileScreen(),
       ];
 
@@ -210,9 +211,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           label: 'Routine',
         ),
         NavigationDestination(
-          icon: Icon(Icons.door_front_door_outlined),
-          selectedIcon: Icon(Icons.door_front_door_rounded),
-          label: 'Rooms',
+          icon: Icon(Icons.school_outlined),
+          selectedIcon: Icon(Icons.school_rounded),
+          label: 'Classroom',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),
