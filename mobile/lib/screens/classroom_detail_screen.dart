@@ -194,82 +194,215 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     String targetCohort = 'All Cohorts';
     final cohortOptions = ['All Cohorts', ...widget.classroom.cohorts];
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dCtx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Post Classroom Notice', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          content: SingleChildScrollView(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Top drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Sheet Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySky.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.campaign_rounded, color: AppColors.primarySky, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Post Classroom Notice',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.classroom.courseCode,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 16),
+
+                // Notice Title Field
                 TextField(
                   controller: _noteTitleCtrl,
                   decoration: InputDecoration(
                     labelText: 'Notice Title',
-                    hintText: 'e.g. Midterm Syllabus & Date',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    hintText: 'e.g. Midterm Syllabus & Exam Date',
+                    prefixIcon: const Icon(Icons.title_rounded, color: AppColors.primarySky, size: 20),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.primarySky, width: 1.5),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+
+                // Cohort Dropdown if multiple cohorts
                 if (cohortOptions.length > 1) ...[
                   DropdownButtonFormField<String>(
                     initialValue: targetCohort,
                     decoration: InputDecoration(
-                      labelText: 'Target Cohort',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      labelText: 'Target Cohort / Section',
+                      prefixIcon: const Icon(Icons.groups_rounded, color: AppColors.primarySky, size: 20),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.primarySky, width: 1.5),
+                      ),
                     ),
-                    items: cohortOptions.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
+                    items: cohortOptions
+                        .map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            ))
+                        .toList(),
                     onChanged: (val) {
                       if (val != null) setDialogState(() => targetCohort = val);
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                 ],
+
+                // Notice Content Field
                 TextField(
                   controller: _noteCtrl,
                   maxLines: 4,
                   decoration: InputDecoration(
                     labelText: 'Notice Content',
-                    hintText: 'e.g. Midterm exam on Chapter 3 & 4.\nAssignment due this Sunday.',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    hintText: 'Write notice details, deadlines, or room instructions...',
+                    alignLabelWithHint: true,
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 56),
+                      child: Icon(Icons.notes_rounded, color: AppColors.primarySky, size: 20),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.primarySky, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Post Button
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primarySky,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      final text = _noteCtrl.text.trim();
+                      if (text.isNotEmpty) {
+                        final title = _noteTitleCtrl.text.trim();
+                        final newNote = {
+                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                          'title': title.isNotEmpty ? title : 'Class Notice',
+                          'text': text,
+                          'cohort': targetCohort,
+                          'createdAt': DateTime.now().toIso8601String(),
+                        };
+                        setState(() => _notes.insert(0, newNote));
+                        _saveNotes();
+                      }
+                      Navigator.pop(sheetCtx);
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text(
+                      'Publish Notice',
+                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primarySky,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                final text = _noteCtrl.text.trim();
-                if (text.isNotEmpty) {
-                  final title = _noteTitleCtrl.text.trim();
-                  final newNote = {
-                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                    'title': title.isNotEmpty ? title : 'Class Notice',
-                    'text': text,
-                    'cohort': targetCohort,
-                    'createdAt': DateTime.now().toIso8601String(),
-                  };
-                  setState(() => _notes.insert(0, newNote));
-                  _saveNotes();
-                }
-                Navigator.pop(dCtx);
-              },
-              child: const Text('Post Notice'),
-            ),
-          ],
         ),
       ),
     );
@@ -287,17 +420,82 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     String targetCohort = 'All Cohorts';
     final cohortOptions = ['All Cohorts', ...widget.classroom.cohorts];
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (dCtx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Post Lecture & Materials', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          content: SingleChildScrollView(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySky.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.menu_book_rounded, color: AppColors.primarySky, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Post Lecture Material',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.classroom.courseCode,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+                      onPressed: () => Navigator.pop(sheetCtx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -306,101 +504,176 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                         controller: _lecNumCtrl,
                         decoration: InputDecoration(
                           labelText: 'Lecture #',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       flex: 6,
                       child: TextField(
                         controller: _lecDateCtrl,
                         decoration: InputDecoration(
                           labelText: 'Date',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _lecTitleCtrl,
                   decoration: InputDecoration(
                     labelText: 'Lecture Topic / Title',
-                    hintText: 'e.g. Design Patterns & Singleton',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    hintText: 'e.g. Design Patterns & Architecture',
+                    prefixIcon: const Icon(Icons.title_rounded, color: AppColors.primarySky, size: 20),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 if (cohortOptions.length > 1) ...[
                   DropdownButtonFormField<String>(
                     initialValue: targetCohort,
                     decoration: InputDecoration(
                       labelText: 'Assigned Cohort',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      prefixIcon: const Icon(Icons.groups_rounded, color: AppColors.primarySky, size: 20),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
                     ),
-                    items: cohortOptions.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13)))).toList(),
+                    items: cohortOptions
+                        .map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            ))
+                        .toList(),
                     onChanged: (val) {
                       if (val != null) setDialogState(() => targetCohort = val);
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                 ],
                 TextField(
                   controller: _lecTopicsCtrl,
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Topics Covered & Summary',
-                    hintText: 'e.g. Discussed Creational patterns, singleton thread safety, code examples.',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    hintText: 'e.g. Discussed singleton, builder, and factory patterns.',
+                    alignLabelWithHint: true,
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 40),
+                      child: Icon(Icons.notes_rounded, color: AppColors.primarySky, size: 20),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _lecLinkCtrl,
                   decoration: InputDecoration(
                     labelText: 'Slides / Resource Link (Optional)',
                     hintText: 'e.g. https://drive.google.com/...',
-                    prefixIcon: const Icon(Icons.link_rounded, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.link_rounded, color: AppColors.primarySky, size: 20),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primarySky,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      final title = _lecTitleCtrl.text.trim();
+                      if (title.isNotEmpty) {
+                        final newLec = {
+                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                          'number': _lecNumCtrl.text.trim().isNotEmpty ? _lecNumCtrl.text.trim() : nextNum,
+                          'title': title,
+                          'date': _lecDateCtrl.text.trim(),
+                          'topics': _lecTopicsCtrl.text.trim(),
+                          'link': _lecLinkCtrl.text.trim(),
+                          'cohort': targetCohort,
+                          'createdAt': DateTime.now().toIso8601String(),
+                        };
+                        setState(() => _lectures.insert(0, newLec));
+                        _saveLectures();
+                      }
+                      Navigator.pop(sheetCtx);
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text(
+                      'Publish Lecture',
+                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primarySky,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                final title = _lecTitleCtrl.text.trim();
-                if (title.isNotEmpty) {
-                  final newLec = {
-                    'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                    'number': _lecNumCtrl.text.trim().isNotEmpty ? _lecNumCtrl.text.trim() : nextNum,
-                    'title': title,
-                    'date': _lecDateCtrl.text.trim(),
-                    'topics': _lecTopicsCtrl.text.trim(),
-                    'link': _lecLinkCtrl.text.trim(),
-                    'cohort': targetCohort,
-                    'createdAt': DateTime.now().toIso8601String(),
-                  };
-                  setState(() => _lectures.insert(0, newLec));
-                  _saveLectures();
-                }
-                Navigator.pop(dCtx);
-              },
-              child: const Text('Post Lecture'),
-            ),
-          ],
         ),
       ),
     );
@@ -430,6 +703,20 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(course.courseCode, style: const TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          if (_tabController.index == 0 && canManageNotices)
+            IconButton(
+              tooltip: 'New Notice',
+              icon: const Icon(Icons.add_rounded),
+              onPressed: _addNoteDialog,
+            )
+          else if (_tabController.index == 1 && canManageLectures)
+            IconButton(
+              tooltip: 'New Lecture',
+              icon: const Icon(Icons.add_rounded),
+              onPressed: _addLectureDialog,
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primarySky,
@@ -483,20 +770,58 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     required bool canManageLectures,
   }) {
     if (_tabController.index == 0 && canManageNotices) {
-      return FloatingActionButton.extended(
-        backgroundColor: AppColors.primarySky,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New Notice'),
-        onPressed: _addNoteDialog,
+      if (_notes.isEmpty) return null; // Avoid competing button on empty state
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primarySky.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          elevation: 0,
+          highlightElevation: 0,
+          backgroundColor: AppColors.primarySky,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          icon: const Icon(Icons.edit_note_rounded, size: 20),
+          label: const Text(
+            'New Notice',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, letterSpacing: 0.2),
+          ),
+          onPressed: _addNoteDialog,
+        ),
       );
     } else if (_tabController.index == 1 && canManageLectures) {
-      return FloatingActionButton.extended(
-        backgroundColor: AppColors.primarySky,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New Lecture'),
-        onPressed: _addLectureDialog,
+      if (_lectures.isEmpty) return null; // Avoid competing button on empty state
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primarySky.withValues(alpha: 0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          elevation: 0,
+          highlightElevation: 0,
+          backgroundColor: AppColors.primarySky,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          icon: const Icon(Icons.post_add_rounded, size: 20),
+          label: const Text(
+            'New Lecture',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, letterSpacing: 0.2),
+          ),
+          onPressed: _addLectureDialog,
+        ),
       );
     }
     return null;
@@ -588,39 +913,91 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   Widget _buildNoticesTab({required bool canManage}) {
     if (_notes.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.campaign_outlined, size: 48, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              const Text(
-                'No notices posted yet',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                canManage
-                    ? 'Post syllabus updates, exam reminders, or assignment deadlines for this classroom.'
-                    : 'Your faculty or CR will post announcements and classroom notices here.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-              ),
-              if (canManage) ...[
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primarySky,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: _addNoteDialog,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Add First Notice'),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
-            ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySky.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.campaign_rounded,
+                    size: 32,
+                    color: AppColors.primarySky,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No Notices Posted Yet',
+                  style: TextStyle(
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  canManage
+                      ? 'Broadcast syllabus updates, assignment deadlines, or exam reminders to your students.'
+                      : 'Your faculty or CR will post announcements and classroom notices here.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                if (canManage) ...[
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primarySky,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _addNoteDialog,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Post Notice',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       );
@@ -636,11 +1013,18 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
         final cohort = note['cohort'] as String?;
 
         return Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -651,30 +1035,30 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryLight,
+                          color: AppColors.primarySky.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text('Notice', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.primarySky)),
+                        child: const Text('Notice', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primarySky)),
                       ),
                       if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts') ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                           decoration: BoxDecoration(
                             color: AppColors.background,
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.border),
                           ),
-                          child: Text(cohort, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          child: Text(cohort, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
                         ),
                       ],
                     ],
                   ),
                   if (canManage)
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.textMuted),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                       onPressed: () {
@@ -684,17 +1068,17 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               if (title.isNotEmpty && title != 'Class Notice') ...[
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
               ],
               Text(
                 note['text'] ?? '',
-                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.4),
+                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.45),
               ),
             ],
           ),
@@ -707,39 +1091,91 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   Widget _buildLecturesTab({required bool canManage}) {
     if (_lectures.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.menu_book_outlined, size: 48, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              const Text(
-                'No lectures posted yet',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                canManage
-                    ? 'Post lecture topics, covered modules, and slide resources for your students.'
-                    : 'Your faculty will post weekly lecture summaries and slides here.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
-              ),
-              if (canManage) ...[
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primarySky,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: _addLectureDialog,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Post First Lecture'),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
-            ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySky.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_rounded,
+                    size: 30,
+                    color: AppColors.primarySky,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No Lectures Posted Yet',
+                  style: TextStyle(
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  canManage
+                      ? 'Upload weekly lecture topics, covered modules, and slide resources for your students.'
+                      : 'Your faculty will post weekly lecture summaries and slides here.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                if (canManage) ...[
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primarySky,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _addLectureDialog,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Post Lecture Material',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       );
