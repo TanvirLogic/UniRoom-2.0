@@ -6,14 +6,12 @@ import '../core/constants/app_colors.dart';
 import '../models/section_student_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/attendance_service.dart';
-import '../services/schedule_service.dart';
 import 'student_classrooms_screen.dart';
 
 /// ClassroomDetailScreen
 /// Dedicated virtual classroom hub for a course:
-/// - Weekly lecture timings & physical rooms
+/// - Course notice board / notes at the top
 /// - Enrolled section classmates & Class Representatives
-/// - Course notice board / notes
 class ClassroomDetailScreen extends StatefulWidget {
   final ClassroomCourse classroom;
 
@@ -38,7 +36,10 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadClassmates();
     _loadNotes();
   }
@@ -159,10 +160,15 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
           indicatorColor: AppColors.primarySky,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-          tabs: const [
-            Tab(icon: Icon(Icons.calendar_today_rounded, size: 20), text: 'Timetable'),
-            Tab(icon: Icon(Icons.people_alt_outlined, size: 20), text: 'Classmates'),
-            Tab(icon: Icon(Icons.edit_note_rounded, size: 20), text: 'Notice Board'),
+          tabs: [
+            Tab(
+              icon: const Icon(Icons.campaign_outlined, size: 20),
+              text: 'Notice Board (${_notes.length})',
+            ),
+            Tab(
+              icon: const Icon(Icons.people_alt_outlined, size: 20),
+              text: 'Classmates (${_classmates.length})',
+            ),
           ],
         ),
       ),
@@ -171,20 +177,19 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
           // Header Card
           _buildHeroHeader(course),
 
-          // Tab View
+          // Tab View: Notice Board first, then Classmates
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildScheduleTab(course),
-                _buildClassmatesTab(),
                 _buildNoticesTab(),
+                _buildClassmatesTab(),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 2
+      floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.primarySky,
               foregroundColor: Colors.white,
@@ -252,114 +257,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildScheduleTab(ClassroomCourse course) {
-    final now = DateTime.now();
-    final todayDay = ScheduleService.getDayOfWeekString(now);
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: course.weeklySlots.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (ctx, index) {
-        final slot = course.weeklySlots[index];
-        final isToday = slot.dayOfWeek.toUpperCase() == todayDay.toUpperCase();
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isToday ? AppColors.iceBlue : AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isToday ? AppColors.borderSky : AppColors.border,
-              width: isToday ? 1.5 : 1,
-            ),
-            boxShadow: isToday ? AppColors.softShadow : null,
-          ),
-          child: Row(
-            children: [
-              // Day Pill
-              Container(
-                width: 52,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isToday ? AppColors.primarySky : AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    slot.dayOfWeek,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: isToday ? Colors.white : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // Time & Room
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${slot.startTime} - ${slot.endTime}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.meeting_room_outlined, size: 15, color: AppColors.textSecondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Room ${slot.roomNumber ?? "TBA"}',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (slot.buildingName != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            '• ${slot.buildingName}',
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              if (isToday)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text(
-                    'Today',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primarySky,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
     );
   }
 
