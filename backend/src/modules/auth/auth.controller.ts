@@ -4,6 +4,7 @@ import {
   Get,
   Patch,
   Body,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -138,10 +139,15 @@ export class AuthController {
   @Get('section-students')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get all students enrolled in the caller\'s department, batch, and section' })
+  @ApiOperation({ summary: 'Get all students enrolled in the caller or specified department, batch, and section' })
   @ApiResponse({ status: 200, description: 'List of section classmates' })
-  async getSectionStudents(@CurrentUser('sub') userId: string) {
-    return this.authService.getSectionStudents(userId);
+  async getSectionStudents(
+    @CurrentUser('sub') userId: string,
+    @Query('department') department?: string,
+    @Query('batch') batch?: string,
+    @Query('section') section?: string,
+  ) {
+    return this.authService.getSectionStudents(userId, { department, batch, section });
   }
 
   @Post('section-students')

@@ -110,37 +110,18 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
       final raw = prefs.getString(_lecturesStorageKey);
       if (raw != null && raw.isNotEmpty) {
         final List decoded = jsonDecode(raw);
+        final list = decoded
+            .map((e) => Map<String, dynamic>.from(e))
+            .where((l) => l['id'] != 'seed_1' && l['id'] != 'seed_2')
+            .toList();
         setState(() {
-          _lectures = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+          _lectures = list;
         });
+        await prefs.setString(_lecturesStorageKey, jsonEncode(list));
       } else {
-        // Seed default initial lectures if empty
-        final initial = [
-          {
-            'id': 'seed_1',
-            'number': 'Lecture 01',
-            'title': 'Course Introduction & Syllabus Overview',
-            'date': 'Oct 01, 2026',
-            'topics': 'Introduction to course outcomes, grading policy, recommended textbooks, and tool setup.',
-            'link': 'https://drive.google.com/uniroom/slides-lec01',
-            'cohort': 'All Batches',
-            'createdAt': DateTime.now().subtract(const Duration(days: 6)).toIso8601String(),
-          },
-          {
-            'id': 'seed_2',
-            'number': 'Lecture 02',
-            'title': 'Core Fundamentals & Architecture Principles',
-            'date': 'Oct 04, 2026',
-            'topics': 'System analysis, domain models, modular design, and requirement breakdown.',
-            'link': 'https://github.com/uniroom/lecture-resources',
-            'cohort': 'All Batches',
-            'createdAt': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-          },
-        ];
         setState(() {
-          _lectures = initial;
+          _lectures = [];
         });
-        await prefs.setString(_lecturesStorageKey, jsonEncode(initial));
       }
     } catch (_) {}
   }
@@ -174,6 +155,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
         department: dept,
         batch: batch,
         section: section,
+        forceRefresh: true,
       );
       if (mounted) {
         setState(() {

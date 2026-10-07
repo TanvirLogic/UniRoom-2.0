@@ -766,8 +766,11 @@ export class AuthService {
     };
   }
 
-  /// Get all registered classmates in the caller's cohort (department, batch, section)
-  async getSectionStudents(userId: string) {
+  /// Get all registered classmates in the specified or caller's cohort (department, batch, section)
+  async getSectionStudents(
+    userId: string,
+    query?: { department?: string; batch?: string; section?: string },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -783,20 +786,42 @@ export class AuthService {
       throw new NotFoundException('User profile not found');
     }
 
-    if (!user.departmentId || !user.batch || !user.section) {
+    const targetBatch = (query?.batch || user.batch)?.trim();
+    const targetSection = (query?.section || user.section)?.trim();
+
+    if (!targetBatch || !targetSection) {
       return [];
     }
 
-    const cleanBatch = user.batch.trim();
-    const cleanSection = user.section.trim();
+    let departmentId = user.departmentId;
+    if (query?.department) {
+      const cleanDept = query.department.trim();
+      const dept = await this.prisma.department.findFirst({
+        where: {
+          OR: [
+            { id: cleanDept },
+            { code: { equals: cleanDept, mode: 'insensitive' } },
+            { name: { equals: cleanDept, mode: 'insensitive' } },
+          ],
+        },
+      });
+      if (dept) {
+        departmentId = dept.id;
+      }
+    }
+
+    const whereClause: any = {
+      batch: { equals: targetBatch, mode: 'insensitive' },
+      section: { equals: targetSection, mode: 'insensitive' },
+      role: { in: [Role.STUDENT, Role.CR] },
+    };
+
+    if (departmentId) {
+      whereClause.departmentId = departmentId;
+    }
 
     const students = await this.prisma.user.findMany({
-      where: {
-        departmentId: user.departmentId,
-        batch: { equals: cleanBatch, mode: 'insensitive' },
-        section: { equals: cleanSection, mode: 'insensitive' },
-        role: { in: [Role.STUDENT, Role.CR] },
-      },
+      where: whereClause,
       select: {
         id: true,
         fullName: true,

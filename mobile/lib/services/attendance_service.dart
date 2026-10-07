@@ -38,8 +38,10 @@ class AttendanceService {
       if (cachedStr != null && cachedStr.isNotEmpty) {
         try {
           final List decoded = jsonDecode(cachedStr);
+          // Sanitize: purge any legacy hardcoded dummy IDs
           students = decoded
               .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
+              .where((s) => !s.studentId.startsWith('22410810'))
               .toList();
         } catch (_) {}
       }
@@ -49,8 +51,17 @@ class AttendanceService {
     try {
       final token = await _authService.getAccessToken();
       if (token != null) {
+        final queryParams = <String, String>{};
+        if (department.trim().isNotEmpty) queryParams['department'] = department.trim();
+        if (batch.trim().isNotEmpty) queryParams['batch'] = batch.trim();
+        if (section.trim().isNotEmpty) queryParams['section'] = section.trim();
+
+        final uri = Uri.parse(ApiConstants.sectionStudents).replace(
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        );
+
         final response = await http.get(
-          Uri.parse(ApiConstants.sectionStudents),
+          uri,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -63,41 +74,34 @@ class AttendanceService {
               ? decoded['data']
               : (decoded is List ? decoded : []);
 
-          if (list.isNotEmpty) {
-            final liveStudents = list
-                .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
-                .toList();
+          final liveStudents = list
+              .map((item) => SectionStudentModel.fromJson(Map<String, dynamic>.from(item)))
+              .toList();
 
-            // Retain any ongoing attendance selection state (isPresent)
-            final presenceMap = {for (final s in students) s.studentId: s.isPresent};
-            for (final s in liveStudents) {
-              if (presenceMap.containsKey(s.studentId)) {
-                s.isPresent = presenceMap[s.studentId]!;
-              }
+          // Retain any ongoing attendance selection state (isPresent)
+          final presenceMap = {for (final s in students) s.studentId: s.isPresent};
+          for (final s in liveStudents) {
+            if (presenceMap.containsKey(s.studentId)) {
+              s.isPresent = presenceMap[s.studentId]!;
             }
-
-            students = liveStudents;
-
-            // Sort by student roll ID ascending
-            students.sort((a, b) => a.studentId.compareTo(b.studentId));
-
-            // Persist latest live roster to cache
-            await prefs.setString(
-              cacheKey,
-              jsonEncode(students.map((s) => s.toJson()).toList()),
-            );
-
-            return students;
           }
+
+          students = liveStudents;
+
+          // Sort by student roll ID ascending
+          students.sort((a, b) => a.studentId.compareTo(b.studentId));
+
+          // Persist latest live roster to cache
+          await prefs.setString(
+            cacheKey,
+            jsonEncode(students.map((s) => s.toJson()).toList()),
+          );
+
+          return students;
         }
       }
     } catch (_) {
       // Offline fallback: keep cached students
-    }
-
-    // If still empty (e.g. offline first-launch), use default cohort
-    if (students.isEmpty) {
-      students = _getDefaultCohort(department, batch, section);
     }
 
     // Sort by student roll ID ascending
@@ -331,58 +335,5 @@ class AttendanceService {
     }
 
     return buffer.toString().trim();
-  }
-
-  /// Default Realistic Cohort Fallback
-  List<SectionStudentModel> _getDefaultCohort(String dept, String batch, String section) {
-    final cleanSec = section.toUpperCase().trim();
-    final isSecB = cleanSec.contains('B');
-
-    if (isSecB) {
-      return [
-        SectionStudentModel(id: '2241081002', studentId: '2241081002', fullName: 'Sabbir Hossain', department: dept, batch: batch, section: 'B', isCr: true),
-        SectionStudentModel(id: '2241081003', studentId: '2241081003', fullName: 'Tanvir Hasan', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081005', studentId: '2241081005', fullName: 'Md. Abdullah', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081008', studentId: '2241081008', fullName: 'Sumaiya Akter', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081011', studentId: '2241081011', fullName: 'Fahim Shahriar', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081014', studentId: '2241081014', fullName: 'Mehedi Hasan', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081018', studentId: '2241081018', fullName: 'Nusrat Jahan', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081021', studentId: '2241081021', fullName: 'Mahir Faysal', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081025', studentId: '2241081025', fullName: 'Ayesha Siddika', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081029', studentId: '2241081029', fullName: 'Sakib Al Hasan', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081033', studentId: '2241081033', fullName: 'Sadia Islam', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081037', studentId: '2241081037', fullName: 'Rayhan Ahmed', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081042', studentId: '2241081042', fullName: 'Rifat Hossain', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081046', studentId: '2241081046', fullName: 'Farzana Haque', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081051', studentId: '2241081051', fullName: 'Karim Student', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081055', studentId: '2241081055', fullName: 'Naimul Islam', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081058', studentId: '2241081058', fullName: 'Tamanna Rahman', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081062', studentId: '2241081062', fullName: 'Shahriar Kabir', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081066', studentId: '2241081066', fullName: 'Jannatul Ferdous', department: dept, batch: batch, section: 'B'),
-        SectionStudentModel(id: '2241081070', studentId: '2241081070', fullName: 'Ashiqur Rahman', department: dept, batch: batch, section: 'B'),
-      ];
-    } else {
-      // Section A Default Roster
-      return [
-        SectionStudentModel(id: '2241081001', studentId: '2241081001', fullName: 'Tanvir Ahmed', department: dept, batch: batch, section: 'A', isCr: true),
-        SectionStudentModel(id: '2241081004', studentId: '2241081004', fullName: 'Rakibul Islam', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081007', studentId: '2241081007', fullName: 'Sadman Sakib', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081010', studentId: '2241081010', fullName: 'Anika Tabassum', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081013', studentId: '2241081013', fullName: 'Hasibul Hossain', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081017', studentId: '2241081017', fullName: 'Tasnim Alam', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081020', studentId: '2241081020', fullName: 'Siyam Ahmed', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081024', studentId: '2241081024', fullName: 'Nadia Sultana', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081028', studentId: '2241081028', fullName: 'Mahmudul Hasan', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081032', studentId: '2241081032', fullName: 'Marufa Akter', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081036', studentId: '2241081036', fullName: 'Shakil Khan', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081040', studentId: '2241081040', fullName: 'Nishat Rumman', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081045', studentId: '2241081045', fullName: 'Imran Hossain', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081050', studentId: '2241081050', fullName: 'Rahim Student', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081054', studentId: '2241081054', fullName: 'Arifur Rahman', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081060', studentId: '2241081060', fullName: 'Shraboni Roy', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081065', studentId: '2241081065', fullName: 'Zahidul Islam', department: dept, batch: batch, section: 'A'),
-        SectionStudentModel(id: '2241081072', studentId: '2241081072', fullName: 'Ishrat Jahan', department: dept, batch: batch, section: 'A'),
-      ];
-    }
   }
 }
