@@ -4,6 +4,7 @@ import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/room_provider.dart';
+import 'providers/notification_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
@@ -15,7 +16,7 @@ void main() {
 }
 
 /// Root Application Widget
-/// MultiProvider exposes AuthProvider, ScheduleProvider, and RoomProvider across the app.
+/// MultiProvider exposes AuthProvider, ScheduleProvider, RoomProvider, and NotificationProvider.
 class UniRoomMobileApp extends StatelessWidget {
   const UniRoomMobileApp({super.key});
 
@@ -31,6 +32,9 @@ class UniRoomMobileApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => RoomProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider(),
         ),
       ],
       child: MaterialApp(

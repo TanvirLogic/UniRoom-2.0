@@ -13,6 +13,7 @@ import 'cr_attendance_screen.dart';
 import 'free_rooms_screen.dart';
 import 'faculty_schedule_screen.dart';
 import 'cohort_profile_screen.dart';
+import 'notifications_screen.dart';
 
 /// MainNavigationShell
 /// Renders a role-tailored bottom navigation shell for Student, CR, and Faculty.
@@ -55,6 +56,16 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             margin: const EdgeInsets.all(16),
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                );
+              },
+            ),
             content: Row(
               children: [
                 const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 24),

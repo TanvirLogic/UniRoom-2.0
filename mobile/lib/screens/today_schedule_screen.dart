@@ -4,8 +4,10 @@ import '../core/constants/app_colors.dart';
 import '../models/schedule_slot_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/schedule_service.dart';
 import 'free_rooms_screen.dart';
+import 'notifications_screen.dart';
 
 class TodayScheduleScreen extends StatefulWidget {
   final VoidCallback? onNavigateToWeekly;
@@ -25,6 +27,10 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
       if (user != null) {
         context.read<ScheduleProvider>().syncWithUser(user);
       }
+      final todaySlots = context.read<ScheduleProvider>().todaySlots;
+      if (todaySlots.isNotEmpty) {
+        context.read<NotificationProvider>().syncScheduleAlerts(todaySlots);
+      }
     });
   }
 
@@ -32,7 +38,9 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final schedule = context.watch<ScheduleProvider>();
+    final notificationProvider = context.watch<NotificationProvider>();
     final user = auth.user;
+    final unreadCount = notificationProvider.unreadCount;
 
     final todayName = ScheduleService.getDayOfWeekString(schedule.currentTime);
     final todaySlots = schedule.todaySlots;
@@ -62,7 +70,39 @@ class _TodayScheduleScreenState extends State<TodayScheduleScreen> {
             ),
             onPressed: schedule.isLoading
                 ? null
-                : () => schedule.loadSchedules(),
+                : () async {
+                    await schedule.loadSchedules();
+                    if (context.mounted) {
+                      context.read<NotificationProvider>().syncScheduleAlerts(schedule.todaySlots);
+                    }
+                  },
+          ),
+          // Notification Bell Icon with Live Badge
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text(
+                unreadCount > 9 ? '9+' : '$unreadCount',
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: AppColors.error,
+              offset: const Offset(-4, 4),
+              child: IconButton(
+                tooltip: 'Notifications',
+                icon: const Icon(Icons.notifications_outlined, color: AppColors.textSecondary, size: 24),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  );
+                },
+              ),
+            ),
           ),
         ],
       ),
