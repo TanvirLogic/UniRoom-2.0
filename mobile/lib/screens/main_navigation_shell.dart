@@ -15,6 +15,7 @@ import 'faculty_schedule_screen.dart';
 import 'cohort_profile_screen.dart';
 import 'notifications_screen.dart';
 import 'student_classrooms_screen.dart';
+import 'faculty_classrooms_screen.dart';
 
 /// MainNavigationShell
 /// Renders a role-tailored bottom navigation shell for Student, CR, and Faculty.
@@ -160,19 +161,19 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         ),
       ];
     } else if (isFaculty) {
-      // Faculty View: Teaching Hub, Weekly Routine, Free Rooms, Profile
+      // Faculty View: Daily Teaching Schedule, Weekly Routine, Classrooms Hub, Profile
       pages = [
         const FacultyScheduleScreen(),
         const WeeklyRoutineScreen(),
-        const FreeRoomsScreen(),
+        const FacultyClassroomsScreen(),
         const CohortProfileScreen(),
       ];
 
       destinations = const [
         NavigationDestination(
-          icon: Icon(Icons.school_outlined),
-          selectedIcon: Icon(Icons.school_rounded),
-          label: 'Lectures',
+          icon: Icon(Icons.today_outlined),
+          selectedIcon: Icon(Icons.today_rounded),
+          label: 'Today',
         ),
         NavigationDestination(
           icon: Icon(Icons.calendar_month_outlined),
@@ -180,9 +181,9 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           label: 'Routine',
         ),
         NavigationDestination(
-          icon: Icon(Icons.door_front_door_outlined),
-          selectedIcon: Icon(Icons.door_front_door_rounded),
-          label: 'Rooms',
+          icon: Icon(Icons.class_outlined),
+          selectedIcon: Icon(Icons.class_rounded),
+          label: 'Classrooms',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline_rounded),

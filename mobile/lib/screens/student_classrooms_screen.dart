@@ -7,39 +7,7 @@ import '../providers/schedule_provider.dart';
 import 'classroom_detail_screen.dart';
 import 'free_rooms_screen.dart';
 
-/// ClassroomCourse
-/// Helper structure aggregating all weekly slots belonging to a distinct course
-class ClassroomCourse {
-  final String courseCode;
-  final String courseTitle;
-  final String facultyInitials;
-  final String? facultyName;
-  final List<ScheduleSlotModel> weeklySlots;
-
-  ClassroomCourse({
-    required this.courseCode,
-    required this.courseTitle,
-    required this.facultyInitials,
-    this.facultyName,
-    required this.weeklySlots,
-  });
-
-  int get classesPerWeek => weeklySlots.length;
-
-  /// Check if this course has a lecture active right now
-  bool isRunningNow(DateTime now) {
-    return weeklySlots.any((s) => s.getTimingState(now) == SlotTimingState.runningNow);
-  }
-
-  /// Get the slot running right now
-  ScheduleSlotModel? get runningSlot {
-    final now = DateTime.now();
-    for (final s in weeklySlots) {
-      if (s.getTimingState(now) == SlotTimingState.runningNow) return s;
-    }
-    return null;
-  }
-}
+import '../models/classroom_course_model.dart';
 
 /// StudentClassroomsScreen
 /// Automatically builds virtual digital classrooms for students based on their
