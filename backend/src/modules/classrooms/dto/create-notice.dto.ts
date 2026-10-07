@@ -17,7 +17,7 @@ export class CreateNoticeDto {
   @IsNotEmpty()
   content: string;
 
-  @ApiPropertyOptional({ example: 'Batch 61 (D)', description: 'Target cohort label or All Cohorts' })
+  @ApiPropertyOptional({ example: 'Batch 61 (D)', description: 'Target batch & section label or All Sections' })
   @IsString()
   @IsOptional()
   targetCohort?: string;

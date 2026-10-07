@@ -309,7 +309,7 @@ class AttendanceService {
     buffer.writeln('📌 Class Attendance Report');
     buffer.writeln('📅 Date: $dateFormatted');
     buffer.writeln('📚 Course: $courseDisplay');
-    buffer.writeln('👥 Cohort: $department | Batch: $batch | Section: $section');
+    buffer.writeln('👥 Section: $department | Batch: $batch | Section: $section');
     buffer.writeln('📊 Summary: ${present.length} Present / ${absent.length} Absent (Total: ${allStudents.length})');
     buffer.writeln();
 

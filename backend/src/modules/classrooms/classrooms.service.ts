@@ -61,7 +61,7 @@ export class ClassroomsService {
         department: department.trim().toUpperCase(),
         batch: targetBatch,
         section: targetSection,
-        targetCohort: dto.targetCohort?.trim() || 'All Cohorts',
+        targetCohort: dto.targetCohort?.trim() || 'All Sections',
       },
     });
 
@@ -184,6 +184,7 @@ export class ClassroomsService {
         },
         { batch: null },
         { targetCohort: { equals: 'All Cohorts', mode: 'insensitive' } },
+        { targetCohort: { equals: 'All Sections', mode: 'insensitive' } },
       ];
     }
 

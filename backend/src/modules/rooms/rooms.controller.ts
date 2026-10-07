@@ -176,7 +176,7 @@ export class RoomsController {
   @Roles(Role.SUPER_ADMIN, Role.FACULTY, Role.CR)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Book an available room for an extra class and notify all cohort students',
+    summary: 'Book an available room for an extra class and notify all section students',
     description:
       'CR or Faculty claims an available room, locks it with OCC, and triggers automatic FCM push notifications to all students in that department, batch, and section.',
   })

@@ -840,7 +840,7 @@ export class AuthService {
     return students;
   }
 
-  /// CR or Admin quick-adds a classmate to the section roster
+  /// CR or Admin quick-adds a classmate to the section students list
   async addSectionStudent(
     userId: string,
     dto: { studentId: string; fullName: string; email?: string },

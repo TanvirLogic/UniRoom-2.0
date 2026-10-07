@@ -154,8 +154,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CR, Role.SUPER_ADMIN)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'CR or Admin quick-adds a student to their section roster' })
-  @ApiResponse({ status: 201, description: 'Classmate added or updated in section roster' })
+  @ApiOperation({ summary: 'CR or Admin quick-adds a student to their section students list' })
+  @ApiResponse({ status: 201, description: 'Classmate added or updated in section students list' })
   async addSectionStudent(
     @CurrentUser('sub') userId: string,
     @Body() dto: { studentId: string; fullName: string; email?: string },

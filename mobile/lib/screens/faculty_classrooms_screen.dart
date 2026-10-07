@@ -484,7 +484,7 @@ class _FacultyClassroomsScreenState extends State<FacultyClassroomsScreen> {
                     const SizedBox(height: 7),
                     if (distinctCohorts.isEmpty)
                       const Text(
-                        'General Cohort',
+                        'All Sections',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       )
                     else

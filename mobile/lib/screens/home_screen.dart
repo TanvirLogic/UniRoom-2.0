@@ -179,7 +179,7 @@ class HomeScreen extends StatelessWidget {
                       if (user.batch != null && user.section != null) ...[
                         _buildInfoRow(
                           icon: Icons.group_outlined,
-                          title: 'Academic Cohort',
+                          title: 'Batch & Section',
                           value: 'Batch ${user.batch} • Section ${user.section}',
                         ),
                         const Divider(height: 20, color: AppColors.border),

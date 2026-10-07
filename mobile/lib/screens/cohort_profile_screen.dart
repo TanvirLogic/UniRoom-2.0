@@ -94,7 +94,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
                   const SizedBox(height: 18),
 
                   const Text(
-                    'Update Cohort & Identity',
+                    'Update Academic Section & Identity',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -230,14 +230,14 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
                         );
                         messenger.showSnackBar(
                           const SnackBar(
-                            content: Text('Cohort updated! Today\'s schedule and routine are now synchronized.'),
+                            content: Text('Academic section updated! Today\'s schedule and routine are now synchronized.'),
                             backgroundColor: AppColors.success,
                           ),
                         );
                       } else {
                         messenger.showSnackBar(
                           SnackBar(
-                            content: Text(auth.errorMessage ?? 'Failed to update cohort'),
+                            content: Text(auth.errorMessage ?? 'Failed to update section details'),
                             backgroundColor: AppColors.error,
                           ),
                         );
@@ -308,7 +308,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Profile & Cohort'),
+        title: const Text('My Profile & Section'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.symmetric(
@@ -322,18 +322,18 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
             _buildProfileHero(user),
             const SizedBox(height: 20),
 
-            // Academic Cohort Overview Card
+            // Academic Section Overview Card
             _buildCohortCard(user),
             const SizedBox(height: 20),
 
-            // Edit Cohort Button
+            // Edit Section Button
             ElevatedButton.icon(
               onPressed: () => _openEditCohortSheet(context, user),
               icon: const Icon(Icons.tune_rounded, size: 18),
               label: Text(
                 MediaQuery.sizeOf(context).width < 380
-                    ? 'Edit Academic Cohort'
-                    : 'Edit Cohort (Section, Batch, Dept)',
+                    ? 'Edit Academic Section'
+                    : 'Edit Section (Batch & Dept)',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primarySky,
@@ -440,7 +440,7 @@ class _CohortProfileScreenState extends State<CohortProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Academic Cohort Configuration',
+            'Academic Batch & Section',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
           ),
           const Divider(color: AppColors.border, height: 20),

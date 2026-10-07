@@ -240,8 +240,8 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   void _addNoteDialog() {
     _noteTitleCtrl.clear();
     _noteCtrl.clear();
-    String targetCohort = 'All Cohorts';
-    final cohortOptions = ['All Cohorts', ...widget.classroom.cohorts];
+    String targetCohort = 'All Sections';
+    final cohortOptions = ['All Sections', ...widget.classroom.cohorts];
     bool isSubmitting = false;
 
     showModalBottomSheet(
@@ -350,12 +350,12 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                 ),
                 const SizedBox(height: 14),
 
-                // Cohort Dropdown if multiple cohorts
+                // Section Dropdown if multiple sections exist
                 if (cohortOptions.length > 1) ...[
                   DropdownButtonFormField<String>(
                     initialValue: targetCohort,
                     decoration: InputDecoration(
-                      labelText: 'Target Cohort / Section',
+                      labelText: 'Target Batch & Section',
                       prefixIcon: const Icon(Icons.groups_rounded, color: AppColors.primarySky, size: 20),
                       filled: true,
                       fillColor: AppColors.background,
@@ -449,7 +449,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                             String? targetBatch;
                             String? targetSection;
 
-                            if (targetCohort != 'All Cohorts') {
+                            if (targetCohort != 'All Sections' && targetCohort != 'All Cohorts') {
                               for (final c in widget.classroom.distinctCohorts) {
                                 if (c.label == targetCohort) {
                                   targetBatch = c.batch;
@@ -553,8 +553,8 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     _lecTopicsCtrl.clear();
     _lecLinkCtrl.clear();
 
-    String targetCohort = 'All Cohorts';
-    final cohortOptions = ['All Cohorts', ...widget.classroom.cohorts];
+    String targetCohort = 'All Sections';
+    final cohortOptions = ['All Sections', ...widget.classroom.cohorts];
 
     showModalBottomSheet(
       context: context,
@@ -702,7 +702,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                   DropdownButtonFormField<String>(
                     initialValue: targetCohort,
                     decoration: InputDecoration(
-                      labelText: 'Assigned Cohort',
+                      labelText: 'Assigned Section',
                       prefixIcon: const Icon(Icons.groups_rounded, color: AppColors.primarySky, size: 20),
                       filled: true,
                       fillColor: AppColors.background,
@@ -886,7 +886,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
             ),
             Tab(
               icon: const Icon(Icons.people_alt_outlined, size: 20),
-              text: 'Roster (${_classmates.length})',
+              text: 'Students (${_classmates.length})',
             ),
           ],
         ),
@@ -1225,7 +1225,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                         style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primarySky),
                       ),
                     ),
-                    if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts') ...[
+                    if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts' && cohort != 'All Sections') ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
@@ -1493,7 +1493,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                   color: AppColors.textPrimary,
                 ),
               ),
-              if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts') ...[
+              if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts' && cohort != 'All Sections') ...[
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1580,7 +1580,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
             ),
             child: Row(
               children: [
-                const Text('Cohort: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+                const Text('Section: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: SingleChildScrollView(
@@ -1654,7 +1654,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     if (filtered.isEmpty) {
       return const Center(
         child: Text(
-          'No students found in section roster.',
+          'No students found in this section.',
           style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
         ),
       );

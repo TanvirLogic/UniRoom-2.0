@@ -819,7 +819,7 @@ class _CrAttendanceScreenState extends State<CrAttendanceScreen> {
             onPressed: _showAddStudentDialog,
           ),
           IconButton(
-            tooltip: 'Refresh Roster',
+            tooltip: 'Refresh Students',
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () => _loadCohortAndRoster(forceRefresh: true),
           ),

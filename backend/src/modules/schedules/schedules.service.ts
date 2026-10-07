@@ -905,7 +905,7 @@ export class SchedulesService {
         (user.batch && slot.batch && user.batch !== slot.batch) ||
         (user.section && slot.section && user.section.toLowerCase() !== slot.section.toLowerCase())
       ) {
-        throw new ForbiddenException('CR can only modify classes for their own cohort.');
+        throw new ForbiddenException('CR can only modify classes for their own section.');
       }
     }
 
