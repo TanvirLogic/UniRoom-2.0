@@ -59,4 +59,8 @@ class ApiConstants {
   static String cancelSlotToday(String slotId) => '$baseUrl/schedules/slots/$slotId/cancel-today';
   static String rescheduleSlotToday(String slotId) => '$baseUrl/schedules/slots/$slotId/reschedule-today';
   static String undoSlotOverrideToday(String slotId) => '$baseUrl/schedules/slots/$slotId/override-today';
+
+  // Classroom Notices Endpoints
+  static String get classroomNotices => '$baseUrl/classrooms/notices';
+  static String classroomNoticeDetail(String id) => '$baseUrl/classrooms/notices/$id';
 }

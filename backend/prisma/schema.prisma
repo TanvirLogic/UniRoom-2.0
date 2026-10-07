@@ -199,6 +199,7 @@ model User {
   taughtSlots   ScheduleSlot[] @relation("FacultyClasses")
   roomLogs      RoomLog[]
   createdOverrides ScheduleOverride[] @relation("UserOverrides")
+  classroomNotices ClassroomNotice[] @relation("UserClassroomNotices")
 
   @@unique([universityId, studentId])
   @@index([universityId, departmentId, role])
@@ -299,4 +300,30 @@ model EmergencyAnnouncement {
   university   University  @relation(fields: [universityId], references: [id], onDelete: Cascade)
 
   @@map("emergency_announcements")
+}
+
+// ------------------------------------------------------------------------------
+// 6. Section Classroom Notices
+// ------------------------------------------------------------------------------
+
+model ClassroomNotice {
+  id           String      @id @default(uuid())
+  courseCode   String
+  title        String
+  content      String
+  authorId     String
+  authorName   String
+  authorRole   String
+  department   String
+  batch        String?
+  section      String?
+  targetCohort String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  author       User        @relation("UserClassroomNotices", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([courseCode])
+  @@index([department, batch, section])
+  @@map("classroom_notices")
 }

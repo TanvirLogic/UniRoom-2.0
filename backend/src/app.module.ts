@@ -9,6 +9,7 @@ import { UniversitiesModule } from './modules/universities/universities.module';
 import { RoomsModule } from './modules/rooms/rooms.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ClassroomsModule } from './modules/classrooms/classrooms.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     UniversitiesModule,
     RoomsModule,
     SchedulesModule,
+    ClassroomsModule,
   ],
   controllers: [],
   providers: [],

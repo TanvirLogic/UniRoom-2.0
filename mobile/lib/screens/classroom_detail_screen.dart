@@ -5,9 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_colors.dart';
 import '../models/classroom_course_model.dart';
+import '../models/classroom_notice_model.dart';
 import '../models/section_student_model.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/attendance_service.dart';
+import '../services/classroom_service.dart';
 
 /// ClassroomDetailScreen
 /// Dedicated virtual classroom hub for a course:
@@ -27,6 +30,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final AttendanceService _attendanceService = AttendanceService();
+  final ClassroomService _classroomService = ClassroomService();
 
   // Classmates state
   List<SectionStudentModel> _classmates = [];
@@ -35,7 +39,8 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   CourseCohort? _selectedCohort;
 
   // Notices state
-  List<Map<String, dynamic>> _notes = [];
+  List<ClassroomNoticeModel> _notices = [];
+  bool _isLoadingNotices = false;
   final TextEditingController _noteCtrl = TextEditingController();
   final TextEditingController _noteTitleCtrl = TextEditingController();
 
@@ -78,30 +83,92 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     super.dispose();
   }
 
-  String get _notesStorageKey =>
-      'uniroom_classroom_notes_${widget.classroom.courseCode.toUpperCase()}';
-
   String get _lecturesStorageKey =>
       'uniroom_classroom_lectures_${widget.classroom.courseCode.toUpperCase()}';
 
   Future<void> _loadNotes() async {
+    if (!mounted) return;
+    setState(() => _isLoadingNotices = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_notesStorageKey);
-      if (raw != null && raw.isNotEmpty) {
-        final List decoded = jsonDecode(raw);
+      final user = context.read<AuthProvider>().user;
+      final dept = user?.effectiveDepartmentCode;
+      final batch = user?.batch;
+      final section = user?.section;
+
+      final list = await _classroomService.fetchNotices(
+        courseCode: widget.classroom.courseCode,
+        department: dept,
+        batch: batch,
+        section: section,
+      );
+
+      if (mounted) {
         setState(() {
-          _notes = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+          _notices = list;
+          _isLoadingNotices = false;
         });
+
+        // Sync to in-app NotificationProvider so they appear in notification tray & update bell badge
+        try {
+          context.read<NotificationProvider>().syncClassroomNotices(list);
+        } catch (_) {}
       }
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingNotices = false);
+    }
   }
 
-  Future<void> _saveNotes() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_notesStorageKey, jsonEncode(_notes));
-    } catch (_) {}
+  Future<void> _deleteNoticeDialog(ClassroomNoticeModel notice, int index) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Notice', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        content: Text('Are you sure you want to delete "${notice.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final success = await _classroomService.deleteNotice(notice.id, widget.classroom.courseCode);
+        if (success && mounted) {
+          setState(() => _notices.removeAt(index));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notice deleted successfully'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete notice: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Future<void> _loadLectures() async {
@@ -175,6 +242,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     _noteCtrl.clear();
     String targetCohort = 'All Cohorts';
     final cohortOptions = ['All Cohorts', ...widget.classroom.cohorts];
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -311,9 +379,11 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                               child: Text(c, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             ))
                         .toList(),
-                    onChanged: (val) {
-                      if (val != null) setDialogState(() => targetCohort = val);
-                    },
+                    onChanged: isSubmitting
+                        ? null
+                        : (val) {
+                            if (val != null) setDialogState(() => targetCohort = val);
+                          },
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -352,34 +422,118 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                 // Post Button
                 SizedBox(
                   height: 48,
-                  child: ElevatedButton.icon(
+                  child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySky,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    onPressed: () {
-                      final text = _noteCtrl.text.trim();
-                      if (text.isNotEmpty) {
-                        final title = _noteTitleCtrl.text.trim();
-                        final newNote = {
-                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                          'title': title.isNotEmpty ? title : 'Class Notice',
-                          'text': text,
-                          'cohort': targetCohort,
-                          'createdAt': DateTime.now().toIso8601String(),
-                        };
-                        setState(() => _notes.insert(0, newNote));
-                        _saveNotes();
-                      }
-                      Navigator.pop(sheetCtx);
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 18),
-                    label: const Text(
-                      'Publish Notice',
-                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
-                    ),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final text = _noteCtrl.text.trim();
+                            if (text.isEmpty) {
+                              ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                const SnackBar(content: Text('Please enter notice content')),
+                              );
+                              return;
+                            }
+
+                            setDialogState(() => isSubmitting = true);
+
+                            final title = _noteTitleCtrl.text.trim();
+                            final user = context.read<AuthProvider>().user;
+                            final dept = user?.effectiveDepartmentCode ?? 'CSE';
+
+                            String? targetBatch;
+                            String? targetSection;
+
+                            if (targetCohort != 'All Cohorts') {
+                              for (final c in widget.classroom.distinctCohorts) {
+                                if (c.label == targetCohort) {
+                                  targetBatch = c.batch;
+                                  targetSection = c.section;
+                                  break;
+                                }
+                              }
+                            }
+
+                            try {
+                              final created = await _classroomService.postNotice(
+                                courseCode: widget.classroom.courseCode,
+                                title: title.isNotEmpty ? title : 'Class Notice',
+                                content: text,
+                                targetCohort: targetCohort,
+                                department: dept,
+                                batch: targetBatch,
+                                section: targetSection,
+                              );
+
+                              if (mounted) {
+                                setState(() {
+                                  _notices.insert(0, created);
+                                });
+                                if (sheetCtx.mounted) {
+                                  Navigator.pop(sheetCtx);
+                                }
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Notice published & broadcasted to students!',
+                                            style: TextStyle(fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: AppColors.success,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+
+                                try {
+                                  if (mounted) {
+                                    context.read<NotificationProvider>().syncClassroomNotices([created]);
+                                  }
+                                } catch (_) {}
+                              }
+                            } catch (err) {
+                              if (sheetCtx.mounted) {
+                                setDialogState(() => isSubmitting = false);
+                                ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to publish notice: $err'),
+                                    backgroundColor: AppColors.error,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.send_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Publish Notice',
+                                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
                   ),
                 ),
               ],
@@ -667,6 +821,21 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     return '';
   }
 
+  String _formatNoticeDate(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24 && dt.day == now.day) {
+      final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+      final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return 'Today, $hour:$minute $ampm';
+    }
+    final m = _monthName(dt.month);
+    return '$m ${dt.day}, ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -709,7 +878,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
           tabs: [
             Tab(
               icon: const Icon(Icons.campaign_outlined, size: 20),
-              text: 'Notices (${_notes.length})',
+              text: 'Notices (${_notices.length})',
             ),
             Tab(
               icon: const Icon(Icons.menu_book_outlined, size: 20),
@@ -732,7 +901,12 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildNoticesTab(canManage: canManageNotices),
+                _buildNoticesTab(
+                  canManage: canManageNotices,
+                  isFaculty: isFaculty,
+                  isCr: isCr,
+                  userId: user?.id,
+                ),
                 _buildLecturesTab(canManage: canManageLectures),
                 _buildClassmatesTab(isFaculty: isFaculty),
               ],
@@ -752,7 +926,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     required bool canManageLectures,
   }) {
     if (_tabController.index == 0 && canManageNotices) {
-      if (_notes.isEmpty) return null; // Avoid competing button on empty state
+      if (_notices.isEmpty) return null; // Avoid competing button on empty state
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
@@ -892,180 +1066,260 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   }
 
   // --- TAB 1: NOTICES (Students are strictly read-only) ---
-  Widget _buildNoticesTab({required bool canManage}) {
-    if (_notes.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
+  Widget _buildNoticesTab({
+    required bool canManage,
+    required bool isFaculty,
+    required bool isCr,
+    required String? userId,
+  }) {
+    if (_isLoadingNotices && _notices.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primarySky),
+      );
+    }
+
+    if (_notices.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadNotes,
+        color: AppColors.primarySky,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.12,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySky.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.campaign_rounded,
-                    size: 32,
-                    color: AppColors.primarySky,
-                  ),
+            Center(
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No Notices Posted Yet',
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  canManage
-                      ? 'Broadcast syllabus updates, assignment deadlines, or exam reminders to your students.'
-                      : 'Your faculty or CR will post announcements and classroom notices here.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-                if (canManage) ...[
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primarySky,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySky.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: _addNoteDialog,
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text(
-                        'Post Notice',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
+                      child: const Icon(
+                        Icons.campaign_rounded,
+                        size: 32,
+                        color: AppColors.primarySky,
                       ),
                     ),
-                  ),
-                ],
-              ],
+                    const SizedBox(height: 16),
+                    const Text(
+                      'No Notices Posted Yet',
+                      style: TextStyle(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      canManage
+                          ? 'Broadcast syllabus updates, assignment deadlines, or exam reminders to your students.'
+                          : 'Your faculty or CR will post announcements and classroom notices here.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (canManage) ...[
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primarySky,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: _addNoteDialog,
+                          icon: const Icon(Icons.add_rounded, size: 20),
+                          label: const Text(
+                            'Post Notice',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _notes.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
-      itemBuilder: (ctx, index) {
-        final note = _notes[index];
-        final title = note['title'] as String? ?? 'Class Notice';
-        final cohort = note['cohort'] as String?;
+    return RefreshIndicator(
+      onRefresh: _loadNotes,
+      color: AppColors.primarySky,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: _notices.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (ctx, index) {
+          final notice = _notices[index];
+          final title = notice.title;
+          final cohort = notice.targetCohort;
+          final canDeleteNotice = isFaculty || (isCr && notice.authorId == userId);
 
-        return Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySky.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('Notice', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primarySky)),
-                      ),
-                      if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts') ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: AppColors.background,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Text(cohort, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (canManage)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        setState(() => _notes.removeAt(index));
-                        _saveNotes();
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (title.isNotEmpty && title != 'Class Notice') ...[
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-                const SizedBox(height: 5),
               ],
-              Text(
-                note['text'] ?? '',
-                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.45),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Tag & Action Row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySky.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Notice',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.primarySky),
+                      ),
+                    ),
+                    if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts') ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          cohort,
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (canDeleteNotice)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Delete Notice',
+                        onPressed: () => _deleteNoticeDialog(notice, index),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Author & Date Row
+                Row(
+                  children: [
+                    Icon(
+                      notice.authorRole == 'FACULTY' ? Icons.school_rounded : Icons.person_pin_rounded,
+                      size: 14,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      notice.authorName.isNotEmpty ? notice.authorName : 'Faculty',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    if (notice.authorRole.isNotEmpty) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: (notice.authorRole == 'FACULTY' ? AppColors.primarySky : AppColors.success).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          notice.authorRole == 'FACULTY' ? 'Faculty' : 'CR',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: notice.authorRole == 'FACULTY' ? AppColors.primarySky : AppColors.success,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(
+                      _formatNoticeDate(notice.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Title
+                if (title.isNotEmpty && title != 'Class Notice') ...[
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 6),
+                ],
+
+                // Content Body
+                SelectableText(
+                  notice.content,
+                  style: const TextStyle(fontSize: 13.5, color: AppColors.textPrimary, height: 1.48),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

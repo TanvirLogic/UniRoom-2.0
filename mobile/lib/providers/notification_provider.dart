@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/notification_item_model.dart';
 import '../models/schedule_slot_model.dart';
+import '../models/classroom_notice_model.dart';
 import '../services/notification_service.dart';
 
 /// NotificationProvider
@@ -154,6 +155,43 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  /// Automatically sync live classroom notices posted by faculty/CR into in-app notification center
+  Future<void> syncClassroomNotices(List<ClassroomNoticeModel> notices) async {
+    bool hasAddedNew = false;
+
+    for (final notice in notices) {
+      final alertId = 'notice_${notice.id}';
+      final exists = _notifications.any((n) => n.id == alertId);
+      if (!exists) {
+        _notifications.insert(
+          0,
+          NotificationItemModel(
+            id: alertId,
+            title: '📢 [${notice.courseCode}] ${notice.title}',
+            body: notice.content,
+            timestamp: notice.createdAt,
+            isRead: false,
+            type: 'announcement',
+            data: {
+              'type': 'classroom_notice',
+              'courseCode': notice.courseCode,
+              'noticeId': notice.id,
+            },
+          ),
+        );
+        hasAddedNew = true;
+      }
+    }
+
+    if (hasAddedNew) {
+      if (_notifications.length > _maxStoredNotifications) {
+        _notifications = _notifications.sublist(0, _maxStoredNotifications);
+      }
+      notifyListeners();
+      await _saveToStorage();
+    }
+  }
+
   /// Mark single notification as read
   Future<void> markAsRead(String id) async {
     final index = _notifications.indexWhere((n) => n.id == id);
@@ -200,7 +238,9 @@ class NotificationProvider extends ChangeNotifier {
 
   String _inferType(String title, String body, dynamic rawType) {
     if (rawType != null && rawType.toString().isNotEmpty) {
-      return rawType.toString().toLowerCase();
+      final t = rawType.toString().toLowerCase();
+      if (t == 'classroom_notice') return 'announcement';
+      return t;
     }
     final combined = '$title $body'.toLowerCase();
     if (combined.contains('cancel') || combined.contains('suspend')) {
@@ -212,7 +252,7 @@ class NotificationProvider extends ChangeNotifier {
     if (combined.contains('room') || combined.contains('freed') || combined.contains('booked')) {
       return 'room';
     }
-    if (combined.contains('emergency') || combined.contains('announcement') || combined.contains('broadcast')) {
+    if (combined.contains('notice') || combined.contains('emergency') || combined.contains('announcement') || combined.contains('broadcast')) {
       return 'announcement';
     }
     return 'general';
