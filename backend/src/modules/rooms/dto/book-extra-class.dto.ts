@@ -36,4 +36,14 @@ export class BookExtraClassDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @ApiProperty({ example: 'CSE', required: false, description: 'Department code' })
+  @IsString()
+  @IsOptional()
+  department?: string;
+
+  @ApiProperty({ example: '11:30', required: false, description: 'Start time in HH:mm format' })
+  @IsString()
+  @IsOptional()
+  startTime?: string;
 }

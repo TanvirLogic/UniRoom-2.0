@@ -4,6 +4,7 @@ import '../core/constants/app_colors.dart';
 import '../models/room_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/room_provider.dart';
+import '../providers/schedule_provider.dart';
 
 class FreeRoomsScreen extends StatefulWidget {
   const FreeRoomsScreen({super.key});
@@ -486,10 +487,12 @@ class _FreeRoomsScreenState extends State<FreeRoomsScreen> {
                           section: sectionCtrl.text.trim(),
                           teacherInitials: teacherCtrl.text.trim().isEmpty ? null : teacherCtrl.text.trim(),
                           durationMinutes: durationMinutes,
+                          department: authUser?.effectiveDepartmentCode ?? 'CSE',
                         );
 
                     if (context.mounted) {
                       if (success) {
+                        context.read<ScheduleProvider>().loadSchedules();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: AppColors.success,

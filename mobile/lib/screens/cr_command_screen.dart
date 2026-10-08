@@ -5,6 +5,7 @@ import '../models/schedule_slot_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/room_provider.dart';
 import '../providers/schedule_provider.dart';
+import 'free_rooms_screen.dart';
 
 class CrCommandScreen extends StatefulWidget {
   const CrCommandScreen({super.key});
@@ -730,6 +731,513 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
   }
 
   // ===========================================================================
+  // 5. SCHEDULE EXTRA CLASS BOTTOM SHEET
+  // ===========================================================================
+  void _openScheduleExtraClassSheet(BuildContext context) {
+    final authUser = context.read<AuthProvider>().user;
+    final scheduleProv = context.read<ScheduleProvider>();
+
+    // Load available rooms immediately
+    context.read<RoomProvider>().loadFreeRoomsNow();
+
+    final courseCtrl = TextEditingController(text: 'Extra Class');
+    final teacherCtrl = TextEditingController();
+    final batchCtrl = TextEditingController(text: authUser?.batch ?? '68');
+    final sectionCtrl = TextEditingController(text: authUser?.section ?? 'B');
+    final customRoomCtrl = TextEditingController();
+
+    TimeOfDay selectedStartTime = TimeOfDay.now();
+    int durationMinutes = 90;
+    String? selectedRoomId;
+    int selectedRoomVersion = 1;
+
+    final existingCourses = scheduleProv.allWeeklySlots
+        .map((s) => s.courseCode)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Consumer<RoomProvider>(
+        builder: (ctx, roomProv, _) => StatefulBuilder(
+          builder: (ctx2, setSheetState) {
+            final freeRooms = roomProv.freeRooms;
+            final startFormatted =
+                '${selectedStartTime.hour.toString().padLeft(2, '0')}:${selectedStartTime.minute.toString().padLeft(2, '0')}';
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Sheet Header
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.alarm_add_rounded, color: AppColors.primarySky, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Schedule Extra Class',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                'Notifies students & adds slot to Today\'s timetable',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Course Name / Code
+                    TextField(
+                      controller: courseCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Course Name / Code',
+                        hintText: 'e.g. CSE-311 Database Systems',
+                        prefixIcon: const Icon(Icons.menu_book_rounded, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surfaceVariant,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    if (existingCourses.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: existingCourses.take(5).map((code) {
+                          return ActionChip(
+                            label: Text(code, style: const TextStyle(fontSize: 11)),
+                            backgroundColor: AppColors.surfaceVariant,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            side: const BorderSide(color: AppColors.border),
+                            onPressed: () {
+                              setSheetState(() {
+                                final slotMatch = scheduleProv.allWeeklySlots.firstWhere(
+                                  (s) => s.courseCode == code,
+                                  orElse: () => scheduleProv.allWeeklySlots.first,
+                                );
+                                courseCtrl.text = slotMatch.courseName.isNotEmpty
+                                    ? '${slotMatch.courseCode} ${slotMatch.courseName}'.trim()
+                                    : slotMatch.courseCode;
+                                if (slotMatch.facultyInitials.isNotEmpty) {
+                                  teacherCtrl.text = slotMatch.facultyInitials;
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+
+                    // Batch & Section Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: batchCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Batch',
+                              hintText: 'e.g. 68',
+                              prefixIcon: const Icon(Icons.groups_rounded, size: 20),
+                              filled: true,
+                              fillColor: AppColors.surfaceVariant,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: sectionCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Section',
+                              hintText: 'e.g. B',
+                              prefixIcon: const Icon(Icons.class_rounded, size: 20),
+                              filled: true,
+                              fillColor: AppColors.surfaceVariant,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Faculty Initials
+                    TextField(
+                      controller: teacherCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Faculty Initial (Optional)',
+                        hintText: 'e.g. DNS or KTK',
+                        prefixIcon: const Icon(Icons.person_rounded, size: 20),
+                        filled: true,
+                        fillColor: AppColors.surfaceVariant,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Classroom Selection
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Classroom Selection:',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.search_rounded, size: 14),
+                          label: const Text('Search Free Rooms', style: TextStyle(fontSize: 11)),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const FreeRoomsScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+
+                    if (roomProv.isLoading && freeRooms.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                          child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                        ),
+                      )
+                    else if (freeRooms.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedRoomId,
+                            hint: const Text(
+                              'Choose an available room',
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            ),
+                            items: [
+                              ...freeRooms.map((r) => DropdownMenuItem(
+                                    value: r.id.isNotEmpty ? r.id : r.roomNumber,
+                                    child: Text(
+                                      'Room ${r.roomNumber} (${r.buildingName ?? "Main"} • Fl ${r.floor} • ${r.capacity} seats)',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                  )),
+                              const DropdownMenuItem(
+                                value: '__custom__',
+                                child: Text('Enter custom room number...', style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+                              ),
+                            ],
+                            onChanged: (val) {
+                              setSheetState(() {
+                                selectedRoomId = val;
+                                if (val != null && val != '__custom__') {
+                                  final matched = freeRooms.firstWhere(
+                                    (r) => (r.id.isNotEmpty ? r.id : r.roomNumber) == val,
+                                    orElse: () => freeRooms.first,
+                                  );
+                                  selectedRoomVersion = matched.version;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    if (selectedRoomId == '__custom__' || freeRooms.isEmpty) ...[
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: customRoomCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Room Number',
+                          hintText: 'e.g. 503 or Lab 4',
+                          prefixIcon: const Icon(Icons.meeting_room_outlined, size: 20),
+                          filled: true,
+                          fillColor: AppColors.surfaceVariant,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+
+                    // Timing & Duration
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Start Time:',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                              ),
+                              const SizedBox(height: 6),
+                              InkWell(
+                                onTap: () async {
+                                  final picked = await showTimePicker(
+                                    context: sheetCtx,
+                                    initialTime: selectedStartTime,
+                                  );
+                                  if (picked != null) {
+                                    setSheetState(() => selectedStartTime = picked);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        startFormatted,
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                                      ),
+                                      const Icon(Icons.access_time_rounded, size: 18, color: AppColors.primarySky),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Duration:',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [45, 60, 90, 120].map((d) {
+                                  final isSel = durationMinutes == d;
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                                      child: InkWell(
+                                        onTap: () => setSheetState(() => durationMinutes = d),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: isSel ? AppColors.primarySky : AppColors.surfaceVariant,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${d}m',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: isSel ? Colors.white : AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Confirm Action Button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.send_rounded, size: 18),
+                      label: const Text('Confirm & Broadcast Extra Class'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primarySky,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () async {
+                        final course = courseCtrl.text.trim();
+                        final batch = batchCtrl.text.trim();
+                        final section = sectionCtrl.text.trim();
+                        final teacher = teacherCtrl.text.trim();
+
+                        final targetRoomId = (selectedRoomId != null && selectedRoomId != '__custom__')
+                            ? selectedRoomId!
+                            : customRoomCtrl.text.trim();
+
+                        if (course.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please enter a course name or code.')),
+                          );
+                          return;
+                        }
+                        if (targetRoomId.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please select or enter a classroom.')),
+                          );
+                          return;
+                        }
+
+                        Navigator.pop(sheetCtx);
+
+                        final success = await roomProv.bookExtraClass(
+                          roomId: targetRoomId,
+                          version: selectedRoomVersion,
+                          courseName: course,
+                          batch: batch.isNotEmpty ? batch : (authUser?.batch ?? '68'),
+                          section: section.isNotEmpty ? section : (authUser?.section ?? 'B'),
+                          teacherInitials: teacher.isNotEmpty ? teacher : null,
+                          durationMinutes: durationMinutes,
+                          department: authUser?.effectiveDepartmentCode ?? 'CSE',
+                          startTime: startFormatted,
+                        );
+
+                        if (context.mounted) {
+                          if (success) {
+                            context.read<ScheduleProvider>().loadSchedules();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: AppColors.success,
+                                content: Text(
+                                  'Extra Class scheduled ($startFormatted)! Push notification sent to Batch $batch ($section) and added to Today\'s timetable.',
+                                ),
+                              ),
+                            );
+                          } else {
+                            final err = roomProv.errorMessage ?? 'Failed to book extra class';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(backgroundColor: AppColors.error, content: Text(err)),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsToolbar(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        children: [
+          // 1. Search Free Rooms Button (Issue 5)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FreeRoomsScreen()),
+                );
+              },
+              icon: const Icon(Icons.meeting_room_outlined, size: 16, color: AppColors.primarySky),
+              label: const Text(
+                'Search Free Rooms',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primarySky,
+                side: const BorderSide(color: AppColors.primarySky, width: 1.2),
+                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: AppColors.surface,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // 2. Take Extra Class Button (Issue 2)
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => _openScheduleExtraClassSheet(context),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+              label: const Text(
+                'Take Extra Class',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primarySky,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
   // MAIN BUILD
   // ===========================================================================
   @override
@@ -767,7 +1275,10 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
             children: [
               // CR Authority Badge
               _buildCrBadgeCard(user),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+
+              // Quick Actions Toolbar (Search Free Rooms + Take Extra Class)
+              _buildQuickActionsToolbar(context),
 
               // Emergency Daily Class Control Section
               _buildSectionHeader(
@@ -1192,13 +1703,42 @@ class _CrCommandScreenState extends State<CrCommandScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
       ),
-      child: const Center(
-        child: Text(
-          'No classes scheduled for your section today.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-        ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryLight,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.event_available_rounded, color: AppColors.primarySky, size: 32),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No Classes Scheduled Today',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Enjoy your off-day! Or if your section has a make-up, lab, or extra class, schedule it now below.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.add_task_rounded, size: 17),
+            label: const Text('Take Extra Class Today'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primarySky,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => _openScheduleExtraClassSheet(context),
+          ),
+        ],
       ),
     );
   }

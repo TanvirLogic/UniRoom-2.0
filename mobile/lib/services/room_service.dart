@@ -186,6 +186,8 @@ class RoomService {
     String? teacherInitials,
     int durationMinutes = 90,
     String? note,
+    String? department,
+    String? startTime,
   }) async {
     final cleanId = roomId.trim();
     if (cleanId.isEmpty) {
@@ -205,6 +207,8 @@ class RoomService {
         'teacherInitials': teacherInitials.trim(),
       'durationMinutes': durationMinutes,
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      if (department != null && department.trim().isNotEmpty) 'department': department.trim(),
+      if (startTime != null && startTime.trim().isNotEmpty) 'startTime': startTime.trim(),
     };
 
     var response = await http.post(

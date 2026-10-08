@@ -35,19 +35,7 @@ class RoomProvider extends ChangeNotifier {
   String? _errorMessage;
   String _selectedBuildingFilter = 'ALL';
 
-  RoomProvider() {
-    // Add an initial sample broadcast so users immediately see how the CR broadcasting network operates
-    _crBroadcasts.add(
-      CrBroadcastAlert(
-        id: 'initial-broadcast-1',
-        roomNumber: '5030 (508)',
-        batch: 'Batch 68',
-        section: 'Sec A',
-        reason: 'Algorithms class finished 30m early',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-      ),
-    );
-  }
+  RoomProvider();
 
   // Getters
   List<RoomModel> get allRooms => _allRooms;
@@ -157,6 +145,8 @@ class RoomProvider extends ChangeNotifier {
     String? teacherInitials,
     int durationMinutes = 90,
     String? note,
+    String? department,
+    String? startTime,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -172,6 +162,8 @@ class RoomProvider extends ChangeNotifier {
         teacherInitials: teacherInitials,
         durationMinutes: durationMinutes,
         note: note,
+        department: department,
+        startTime: startTime,
       );
 
       // Immediately remove booked room from in-memory list for instant UI disappearance

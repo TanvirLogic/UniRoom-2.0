@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DayOfWeek, OverrideAction, Prisma, Role, RoomStatus } from '@prisma/client';
@@ -25,6 +26,8 @@ interface UserContext {
 
 @Injectable()
 export class RoomsService {
+  private readonly logger = new Logger(RoomsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushNotificationService: PushNotificationService,
@@ -556,9 +559,45 @@ export class RoomsService {
       );
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { department: true },
+    });
+
+    const departmentId = user?.departmentId || room.departmentId;
+    const deptCode = (dto.department || user?.department?.code || room.department?.code || 'CSE').trim().toUpperCase();
+
+    const now = new Date();
     const duration = dto.durationMinutes || 90;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    // Calculate start and end times
+    const startTime = dto.startTime?.trim() || `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const [startH, startM] = startTime.split(':').map((x) => parseInt(x, 10));
+    const startTotalMinutes = (isNaN(startH) ? now.getHours() : startH) * 60 + (isNaN(startM) ? now.getMinutes() : startM);
+    const endTotalMinutes = startTotalMinutes + duration;
+    const endH = Math.floor(endTotalMinutes / 60) % 24;
+    const endM = endTotalMinutes % 60;
+    const endTime = `${pad(endH)}:${pad(endM)}`;
+
+    // Current DayOfWeek enum
+    const dayNames: DayOfWeek[] = [
+      DayOfWeek.SUN,
+      DayOfWeek.MON,
+      DayOfWeek.TUE,
+      DayOfWeek.WED,
+      DayOfWeek.THU,
+      DayOfWeek.FRI,
+      DayOfWeek.SAT,
+    ];
+    const currentDayOfWeek = dayNames[now.getDay()];
+
     const leaseExpiresAt = new Date(Date.now() + duration * 60 * 1000);
     const cohortDisplay = `Batch ${dto.batch} (${dto.section})`;
+
+    // Extract or format course code
+    const courseCodeMatch = dto.courseName.trim().match(/^([A-Za-z0-9_-]+)/);
+    const courseCode = courseCodeMatch ? courseCodeMatch[1] : 'EXTRA';
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedRoom = await tx.room.update({
@@ -580,36 +619,77 @@ export class RoomsService {
           changedByUserId: userId,
           previousStatus: room.currentStatus,
           newStatus: RoomStatus.RUNNING_CLASS,
-          note: dto.note || `Extra class booked by CR for ${cohortDisplay}: ${dto.courseName}`,
+          note: dto.note || `Extra class booked by CR for ${cohortDisplay}: ${dto.courseName} (${startTime} - ${endTime})`,
         },
         include: {
           changedByUser: { select: { fullName: true, email: true, role: true } },
         },
       });
 
-      return { room: updatedRoom, auditLog };
+      let scheduleSlot = null;
+      if (departmentId) {
+        scheduleSlot = await tx.scheduleSlot.create({
+          data: {
+            departmentId,
+            roomId: realId,
+            batch: dto.batch.trim(),
+            section: dto.section.trim(),
+            courseCode: courseCode.toUpperCase(),
+            courseName: dto.courseName.trim(),
+            facultyInitials: dto.teacherInitials?.trim() || 'Assigned',
+            dayOfWeek: currentDayOfWeek,
+            startTime,
+            endTime,
+            isActive: true,
+          },
+          include: {
+            room: {
+              select: {
+                id: true,
+                roomNumber: true,
+                floor: true,
+                capacity: true,
+                currentStatus: true,
+                version: true,
+                building: { select: { id: true, name: true, campusName: true } },
+              },
+            },
+            department: {
+              select: { id: true, code: true, name: true, universityId: true },
+            },
+          },
+        });
+      }
+
+      return { room: updatedRoom, auditLog, scheduleSlot };
     });
 
-    // Broadcast FCM Push Notification to all students of this department, batch, and section
-    const deptCode = room.department?.code || 'all';
+    // Broadcast FCM Push Notification to all students of this section
+    const pushTitle = `⚡ Extra Class Booked: ${dto.courseName}`;
+    const pushBody = `Room ${room.roomNumber} (${room.building?.name || 'Campus'}) booked for ${cohortDisplay} from ${startTime} to ${endTime}. Teacher: ${dto.teacherInitials || 'Assigned Faculty'}.`;
+
     this.pushNotificationService.sendToSectionTopic(deptCode, dto.batch, dto.section, {
-      title: `⚡ Extra Class Booked: ${dto.courseName}`,
-      body: `Room ${room.roomNumber} (${room.building.name}) is booked for ${cohortDisplay}. Teacher: ${dto.teacherInitials || 'Assigned Faculty'}.`,
+      title: pushTitle,
+      body: pushBody,
       data: {
         roomId: room.id,
         courseName: dto.courseName,
         teacher: dto.teacherInitials || '',
         batch: dto.batch,
         section: dto.section,
+        startTime,
+        endTime,
         type: 'EXTRA_CLASS_BOOKED',
       },
-    }).catch(() => {});
+    }).catch((err) => {
+      this.logger.warn(`Failed to broadcast extra class push: ${err.message}`);
+    });
 
-    // Also notify the faculty member if initials provided
+    // Also notify faculty member if initials provided
     if (dto.teacherInitials) {
       this.pushNotificationService.sendToFacultyTopic(dto.teacherInitials, {
         title: `Room ${room.roomNumber} Reserved for Your Class`,
-        body: `${cohortDisplay} booked Room ${room.roomNumber} for ${dto.courseName}.`,
+        body: `${cohortDisplay} scheduled an extra class in Room ${room.roomNumber} for ${dto.courseName} (${startTime} - ${endTime}).`,
         data: { roomId: room.id, type: 'FACULTY_CLASS_ALERT' },
       }).catch(() => {});
     }
