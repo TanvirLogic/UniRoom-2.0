@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_colors.dart';
 import '../models/classroom_course_model.dart';
 import '../models/classroom_notice_model.dart';
+import '../models/classroom_lecture_model.dart';
 import '../models/section_student_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
@@ -16,7 +15,7 @@ import '../services/classroom_service.dart';
 /// Dedicated virtual classroom hub for a course:
 /// - Notice Board: Faculty/CR can post notices; Students have read-only view.
 /// - Lectures: Faculty can post lecture outlines, topics, and slide links; Students have read-only view.
-/// - Classmates / Cohort: Roster of enrolled students with CR identification.
+/// - Classmates / Section: List of enrolled students with CR identification.
 class ClassroomDetailScreen extends StatefulWidget {
   final ClassroomCourseModel classroom;
 
@@ -45,7 +44,8 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   final TextEditingController _noteTitleCtrl = TextEditingController();
 
   // Lectures state
-  List<Map<String, dynamic>> _lectures = [];
+  List<ClassroomLectureModel> _lectures = [];
+  bool _isLoadingLectures = false;
   final TextEditingController _lecNumCtrl = TextEditingController();
   final TextEditingController _lecTitleCtrl = TextEditingController();
   final TextEditingController _lecDateCtrl = TextEditingController();
@@ -82,9 +82,6 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
     _lecLinkCtrl.dispose();
     super.dispose();
   }
-
-  String get _lecturesStorageKey =>
-      'uniroom_classroom_lectures_${widget.classroom.courseCode.toUpperCase()}';
 
   Future<void> _loadNotes() async {
     if (!mounted) return;
@@ -172,32 +169,30 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
   }
 
   Future<void> _loadLectures() async {
+    if (!mounted) return;
+    setState(() => _isLoadingLectures = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_lecturesStorageKey);
-      if (raw != null && raw.isNotEmpty) {
-        final List decoded = jsonDecode(raw);
-        final list = decoded
-            .map((e) => Map<String, dynamic>.from(e))
-            .where((l) => l['id'] != 'seed_1' && l['id'] != 'seed_2')
-            .toList();
+      final user = context.read<AuthProvider>().user;
+      final dept = user?.effectiveDepartmentCode;
+      final batch = user?.batch;
+      final section = user?.section;
+
+      final list = await _classroomService.fetchLectures(
+        courseCode: widget.classroom.courseCode,
+        department: dept,
+        batch: batch,
+        section: section,
+      );
+
+      if (mounted) {
         setState(() {
           _lectures = list;
-        });
-        await prefs.setString(_lecturesStorageKey, jsonEncode(list));
-      } else {
-        setState(() {
-          _lectures = [];
+          _isLoadingLectures = false;
         });
       }
-    } catch (_) {}
-  }
-
-  Future<void> _saveLectures() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_lecturesStorageKey, jsonEncode(_lectures));
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingLectures = false);
+    }
   }
 
   Future<void> _loadClassmates() async {
@@ -555,6 +550,7 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
 
     String targetCohort = 'All Sections';
     final cohortOptions = ['All Sections', ...widget.classroom.cohorts];
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -782,28 +778,91 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    onPressed: () {
-                      final title = _lecTitleCtrl.text.trim();
-                      if (title.isNotEmpty) {
-                        final newLec = {
-                          'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                          'number': _lecNumCtrl.text.trim().isNotEmpty ? _lecNumCtrl.text.trim() : nextNum,
-                          'title': title,
-                          'date': _lecDateCtrl.text.trim(),
-                          'topics': _lecTopicsCtrl.text.trim(),
-                          'link': _lecLinkCtrl.text.trim(),
-                          'cohort': targetCohort,
-                          'createdAt': DateTime.now().toIso8601String(),
-                        };
-                        setState(() => _lectures.insert(0, newLec));
-                        _saveLectures();
-                      }
-                      Navigator.pop(sheetCtx);
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 18),
-                    label: const Text(
-                      'Publish Lecture',
-                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final title = _lecTitleCtrl.text.trim();
+                            if (title.isEmpty) {
+                              ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                const SnackBar(content: Text('Please enter lecture topic / title')),
+                              );
+                              return;
+                            }
+
+                            setDialogState(() => isSubmitting = true);
+
+                            final user = context.read<AuthProvider>().user;
+                            final dept = user?.effectiveDepartmentCode ?? 'CSE';
+
+                            String? targetBatch;
+                            String? targetSection;
+                            if (targetCohort != 'All Sections' && targetCohort != 'All Cohorts') {
+                              for (final c in widget.classroom.distinctCohorts) {
+                                if (c.label == targetCohort) {
+                                  targetBatch = c.batch;
+                                  targetSection = c.section;
+                                  break;
+                                }
+                              }
+                            }
+
+                            try {
+                              final created = await _classroomService.postLecture(
+                                courseCode: widget.classroom.courseCode,
+                                lectureNumber: _lecNumCtrl.text.trim().isNotEmpty
+                                    ? _lecNumCtrl.text.trim()
+                                    : nextNum,
+                                title: title,
+                                date: _lecDateCtrl.text.trim(),
+                                topics: _lecTopicsCtrl.text.trim(),
+                                link: _lecLinkCtrl.text.trim(),
+                                targetCohort: targetCohort,
+                                department: dept,
+                                batch: targetBatch,
+                                section: targetSection,
+                              );
+
+                              if (mounted) {
+                                setState(() {
+                                  _lectures.removeWhere((l) => l.id == created.id);
+                                  _lectures.insert(0, created);
+                                });
+                              }
+
+                              if (sheetCtx.mounted) {
+                                Navigator.pop(sheetCtx);
+                              }
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Lecture material published & broadcasted successfully!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              setDialogState(() => isSubmitting = false);
+                              if (sheetCtx.mounted) {
+                                ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(
+                      isSubmitting ? 'Publishing...' : 'Publish Lecture',
+                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -1325,242 +1384,294 @@ class _ClassroomDetailScreenState extends State<ClassroomDetailScreen>
 
   // --- TAB 2: LECTURES (Faculty can post; students read-only) ---
   Widget _buildLecturesTab({required bool canManage}) {
+    if (_isLoadingLectures && _lectures.isEmpty) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.primarySky));
+    }
+
     if (_lectures.isEmpty) {
-      return Center(
+      return RefreshIndicator(
+        onRefresh: _loadLectures,
+        color: AppColors.primarySky,
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySky.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
+          child: Center(
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  child: const Icon(
-                    Icons.menu_book_rounded,
-                    size: 30,
-                    color: AppColors.primarySky,
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySky.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.menu_book_rounded,
+                      size: 30,
+                      color: AppColors.primarySky,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'No Lectures Posted Yet',
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No Lectures Posted Yet',
+                    style: TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  canManage
-                      ? 'Upload weekly lecture topics, covered modules, and slide resources for your students.'
-                      : 'Your faculty will post weekly lecture summaries and slides here.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    height: 1.45,
+                  const SizedBox(height: 8),
+                  Text(
+                    canManage
+                        ? 'Upload weekly lecture topics, covered modules, and slide resources for your students.'
+                        : 'Your faculty will post weekly lecture summaries and slides here.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                      height: 1.45,
+                    ),
                   ),
-                ),
-                if (canManage) ...[
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primarySky,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  if (canManage) ...[
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primarySky,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                      onPressed: _addLectureDialog,
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text(
-                        'Post Lecture Material',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
+                        onPressed: _addLectureDialog,
+                        icon: const Icon(Icons.add_rounded, size: 20),
+                        label: const Text(
+                          'Post Lecture Material',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _lectures.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (ctx, index) {
-        final lec = _lectures[index];
-        final number = lec['number'] as String? ?? 'Lecture';
-        final title = lec['title'] as String? ?? '';
-        final date = lec['date'] as String? ?? '';
-        final topics = lec['topics'] as String? ?? '';
-        final link = lec['link'] as String? ?? '';
-        final cohort = lec['cohort'] as String?;
+    return RefreshIndicator(
+      onRefresh: _loadLectures,
+      color: AppColors.primarySky,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: _lectures.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (ctx, index) {
+          final lec = _lectures[index];
+          final number = lec.lectureNumber;
+          final title = lec.title;
+          final date = lec.date;
+          final topics = lec.topics;
+          final link = lec.link;
+          final cohort = lec.targetCohort;
 
-        return Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySky.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          number,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primarySky,
-                          ),
-                        ),
-                      ),
-                      if (date.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          date,
-                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (canManage)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        setState(() => _lectures.removeAt(index));
-                        _saveLectures();
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Title
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts' && cohort != 'All Sections') ...[
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(cohort, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                ),
-              ],
-
-              // Topics
-              if (topics.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  topics,
-                  style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.35),
-                ),
-              ],
-
-              // Resource Link
-              if (link.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: link));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Resource link copied to clipboard'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+          return Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
                       children: [
-                        const Icon(Icons.link_rounded, size: 14, color: AppColors.primarySky),
-                        const SizedBox(width: 6),
-                        Flexible(
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySky.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
-                            link,
+                            number,
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
                               color: AppColors.primarySky,
-                              fontWeight: FontWeight.w700,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (date.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            date,
+                            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ],
                     ),
+                    if (canManage)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.textMuted),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () async {
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogCtx) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                              title: const Text('Delete Lecture Material?'),
+                              content: Text('Are you sure you want to remove "$number: $title"?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogCtx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.error,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () => Navigator.pop(dialogCtx, true),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed == true) {
+                            try {
+                              await _classroomService.deleteLecture(lec.id, widget.classroom.courseCode);
+                              if (mounted) {
+                                setState(() => _lectures.removeWhere((l) => l.id == lec.id));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Lecture material deleted')),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to delete: $e'), backgroundColor: AppColors.error),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Title
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
                   ),
                 ),
+                if (cohort != null && cohort.isNotEmpty && cohort != 'All Cohorts' && cohort != 'All Sections') ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(cohort, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  ),
+                ],
+
+                // Topics
+                if (topics.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    topics,
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.35),
+                  ),
+                ],
+
+                // Resource Link
+                if (link.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: link));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Resource link copied to clipboard'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.link_rounded, size: 14, color: AppColors.primarySky),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              link,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.primarySky,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

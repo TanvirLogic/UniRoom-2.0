@@ -339,6 +339,15 @@ class NotificationsScreen extends StatelessWidget {
           bgColor: AppColors.primaryLight,
           badgeColor: AppColors.primaryLight,
         );
+      case 'classroom_lecture':
+      case 'lecture':
+        return _TypeStyle(
+          label: 'Lecture Material',
+          icon: Icons.menu_book_rounded,
+          iconColor: const Color(0xFF0284C7),
+          bgColor: const Color(0xFFE0F2FE),
+          badgeColor: const Color(0xFFE0F2FE),
+        );
       case 'announcement':
       case 'emergency':
         return _TypeStyle(

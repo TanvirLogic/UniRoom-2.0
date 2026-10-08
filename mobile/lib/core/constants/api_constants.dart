@@ -63,4 +63,8 @@ class ApiConstants {
   // Classroom Notices Endpoints
   static String get classroomNotices => '$baseUrl/classrooms/notices';
   static String classroomNoticeDetail(String id) => '$baseUrl/classrooms/notices/$id';
+
+  // Classroom Lectures Endpoints
+  static String get classroomLectures => '$baseUrl/classrooms/lectures';
+  static String classroomLectureDetail(String id) => '$baseUrl/classrooms/lectures/$id';
 }

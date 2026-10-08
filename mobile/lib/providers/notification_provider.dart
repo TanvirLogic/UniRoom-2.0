@@ -240,9 +240,13 @@ class NotificationProvider extends ChangeNotifier {
     if (rawType != null && rawType.toString().isNotEmpty) {
       final t = rawType.toString().toLowerCase();
       if (t == 'classroom_notice') return 'announcement';
+      if (t == 'classroom_lecture') return 'lecture';
       return t;
     }
     final combined = '$title $body'.toLowerCase();
+    if (combined.contains('lecture') || combined.contains('material') || combined.contains('slides')) {
+      return 'lecture';
+    }
     if (combined.contains('cancel') || combined.contains('suspend')) {
       return 'cancellation';
     }

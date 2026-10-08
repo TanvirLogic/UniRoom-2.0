@@ -200,6 +200,7 @@ model User {
   roomLogs      RoomLog[]
   createdOverrides ScheduleOverride[] @relation("UserOverrides")
   classroomNotices ClassroomNotice[] @relation("UserClassroomNotices")
+  classroomLectures ClassroomLecture[] @relation("UserClassroomLectures")
 
   @@unique([universityId, studentId])
   @@index([universityId, departmentId, role])
@@ -326,4 +327,33 @@ model ClassroomNotice {
   @@index([courseCode])
   @@index([department, batch, section])
   @@map("classroom_notices")
+}
+
+// ------------------------------------------------------------------------------
+// 7. Section Classroom Lectures
+// ------------------------------------------------------------------------------
+
+model ClassroomLecture {
+  id            String      @id @default(uuid())
+  courseCode    String
+  lectureNumber String
+  title         String
+  date          String?
+  topics        String?
+  link          String?
+  authorId      String
+  authorName    String
+  authorRole    String
+  department    String
+  batch         String?
+  section       String?
+  targetCohort  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  author        User        @relation("UserClassroomLectures", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([courseCode])
+  @@index([department, batch, section])
+  @@map("classroom_lectures")
 }
