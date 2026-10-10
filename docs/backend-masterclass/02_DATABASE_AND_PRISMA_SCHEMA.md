@@ -32,32 +32,36 @@ Prisma reads our `schema.prisma` file and automatically writes the exact, optimi
 Here is how all the tables in UniRoom-Live 2.0 connect together:
 
 ```
-┌──────────────┐
-│  University  │
-└──────┬───────┘
-       │ 1:N
-       ▼
-┌──────────────┐       1:N       ┌───────────────┐
-│  Department  ├────────────────►│ AcademicBatch │
-└──────┬───────┘                 └───────────────┘
-       │ 1:N
-       ├────────────────────────┐
-       │ 1:N                    │ 1:N
-       ▼                        ▼
-┌──────────────┐         ┌──────────────┐
-│   Building   │         │     User     │ (Student, CR, Faculty, Admin)
-└──────┬───────┘         └──────┬───────┘
-       │ 1:N                    │
-       ▼                        │
-┌──────────────┐                │
-│     Room     │◄───────────────┤ (Logs & Overrides)
-└──────┬───────┘                │
-       │ 1:N                    │
-       ▼                        ▼
-┌──────────────┐ 1:N     ┌──────────────┐
-│ ScheduleSlot ├────────►│ScheduleOver- │
-└──────────────┘         │    ride      │
-                         └──────────────┘
+┌─────────────────────────┐
+│       University        │
+└────────────┬────────────┘
+             │ 1:N
+             ├─────────────────────────────────────────────────┐ 1:N
+             ▼                                                 ▼
+┌─────────────────────────┐       1:N       ┌─────────────────────────┐   ┌─────────────────────────┐
+│       Department        ├────────────────►│      AcademicBatch      │   │  EmergencyAnnouncement  │
+└────────────┬────────────┘                 └─────────────────────────┘   └─────────────────────────┘
+             │ 1:N
+             ├────────────────────────┐
+             │ 1:N                    │ 1:N
+             ▼                        ▼
+┌─────────────────────────┐   ┌─────────────────────────┐
+│        Building         │   │          User           │ (Student, CR, Faculty, Admin)
+└────────────┬────────────┘   └───────┬────────┬────────┘
+             │ 1:N                    │        │
+             ▼                        │ 1:N    │ 1:N
+┌─────────────────────────┐           ▼        ▼
+│          Room           │◄──┤  ┌──────────┐  ┌──────────┐
+└────────────┬────────────┘   │  │Classroom │  │Classroom │
+             │ 1:N            │  │ Notice   │  │ Lecture  │
+             ▼                │  └──────────┘  └──────────┘
+┌─────────────────────────┐   │ (Logs, Overrides & Authors)
+│      ScheduleSlot       │   │
+└────────────┬────────────┘   │
+             │ 1:N            ▼
+             ▼          ┌─────────────────────────┐
+     ┌──────────────────┤    ScheduleOverride     │
+     │                  └─────────────────────────┘
 ```
 
 ---
@@ -394,6 +398,97 @@ model ScheduleOverride {
   What happens when a teacher gets sick or informs CR that class is cancelled today?
   We don't destroy the master routine! Instead, we record an **override** for today's date.
   The master schedule stays pure for next week, but for today, the app shows "CANCELLED" and the classroom is automatically marked `AVAILABLE` for other batches!
+
+---
+
+### Section G: Real-Time Academic Broadcasts & Virtual Classrooms
+
+#### 10. Model: `EmergencyAnnouncement` (Campus-Wide Bulletins)
+```prisma
+model EmergencyAnnouncement {
+  id           String      @id @default(uuid())
+  universityId String
+  title        String
+  message      String
+  isActive     Boolean     @default(true)
+  expiresAt    DateTime?
+  createdAt    DateTime    @default(now())
+
+  university   University  @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_announcements")
+}
+```
+- **Real-World Purpose**: When sudden campus closures, severe weather warnings, or semester break alerts occur, the administration publishes a top-level alert banner.
+- **Relational Integrity**: Linked to `University` with `onDelete: Cascade`. If a university tenant is deactivated or deleted, all historical bulletins purge cleanly without orphan records.
+- **`expiresAt`**: An optional timestamp allowing self-expiring emergency alerts that disappear from student dashboards automatically once the deadline passes.
+
+#### 11. Model: `ClassroomNotice` (Course Notice Boards)
+```prisma
+model ClassroomNotice {
+  id           String      @id @default(uuid())
+  courseCode   String
+  title        String
+  content      String
+  authorId     String
+  authorName   String
+  authorRole   String
+  department   String
+  batch        String?
+  section      String?
+  targetCohort String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  author       User        @relation("UserClassroomNotices", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([courseCode])
+  @@index([department, batch, section])
+  @@map("classroom_notices")
+}
+```
+- **Real-World Purpose**: Digital replacement for scattered WhatsApp and Telegram group chats. Teachers and CRs post assignment deadlines, quiz dates, and room relocations directly into the course hub.
+- **`targetCohort` & Flexible Scoping**:
+  - If a faculty member wants to broadcast to **only Batch 61 Section D**, `batch: "61"`, `section: "D"`.
+  - If they want to post a global exam notice for **all sections taking Algorithms**, `batch: null`, `section: null`, `targetCohort: "All Sections"`.
+- **Relational Integrity**:
+  `author User @relation(..., onDelete: Cascade)` ensures author accountability while maintaining database consistency.
+- **Compound Query Indexes**:
+  - `@@index([courseCode])`: Extremely fast lookup when students open a course room (e.g., `WHERE courseCode = 'CSE-412'`).
+  - `@@index([department, batch, section])`: Instant cohort-specific filtering so students only see notices meant for their section.
+
+#### 12. Model: `ClassroomLecture` (Course Archives & Resource Hub)
+```prisma
+model ClassroomLecture {
+  id            String      @id @default(uuid())
+  courseCode    String
+  lectureNumber String
+  title         String
+  date          String?
+  topics        String?
+  link          String?
+  authorId      String
+  authorName    String
+  authorRole    String
+  department    String
+  batch         String?
+  section       String?
+  targetCohort  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  author        User        @relation("UserClassroomLectures", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([courseCode])
+  @@index([department, batch, section])
+  @@map("classroom_lectures")
+}
+```
+- **Real-World Purpose**: Tracks the pedagogical progress of the semester: Lecture 01, Lecture 02, Lecture 03...
+- **`lectureNumber`**: Auto-incremented human-readable identifier (`Lecture 01`, `Lecture 02`, etc.) generated by the backend service if omitted.
+- **`topics`**: Bullet-point summary of algorithms, formulas, or slides covered in that class.
+- **`link`**: Direct Google Drive, OneDrive, or GitHub repository URL where presentation slides or code repositories are hosted.
+- **`@@index([courseCode])` & `@@index([department, batch, section])`**: Optimizes concurrent queries when hundreds of students view course lecture archives before midterms.
 
 ---
 

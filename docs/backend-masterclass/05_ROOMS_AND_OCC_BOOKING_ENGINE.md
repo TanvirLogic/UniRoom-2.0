@@ -166,55 +166,223 @@ const [rooms, totalCount, statusCounts] = await Promise.all([
 
 ---
 
-## 4. CR Booking Extra Classes: `bookExtraClass()`
+## 4. CR Booking Extra Classes & Live Timetable Generation: `bookExtraClass()`
 
-When a CR needs an empty classroom for a tutorial or makeup class:
+When a Class Representative (CR) needs to take an extra class or arrange a lab session on an off-day:
 
+### 1. The DTO: `BookExtraClassDto`
 ```typescript
-async bookExtraClass(id: string, dto: BookExtraClassDto, userId: string) {
-  // 1. Verify room exists
-  const room = await this.getRoomById(id);
+export class BookExtraClassDto {
+  @IsNotEmpty()
+  @IsString()
+  courseName: string; // e.g. "SWE-321 Software Architecture"
 
-  // 2. OCC Verification
-  if (dto.version !== undefined && room.version !== dto.version) {
-    throw new ConflictException('Room was recently modified. Please refresh.');
-  }
+  @IsNotEmpty()
+  @IsString()
+  batch: string; // e.g. "68"
 
-  // 3. Ensure room is actually available
-  if (room.currentStatus !== RoomStatus.AVAILABLE) {
-    throw new BadRequestException(
-      `Room ${room.roomNumber} is currently occupied (${room.currentStatus}) by ${room.currentBatch || 'another class'}.`,
-    );
-  }
+  @IsNotEmpty()
+  @IsString()
+  section: string; // e.g. "B"
 
-  // 4. Calculate lease duration (e.g. 90 minutes)
-  const duration = dto.durationMinutes || 90;
-  const leaseExpiresAt = new Date(Date.now() + duration * 60 * 1000);
+  @IsOptional()
+  @IsString()
+  teacherInitials?: string; // e.g. "DNS"
 
-  // 5. Update room status to RESERVED in atomic transaction
-  const updated = await this.prisma.room.update({
-    where: { id: room.id },
-    data: {
-      currentStatus: RoomStatus.RESERVED,
-      version: { increment: 1 },
-      currentCourse: dto.courseName,
-      currentTeacher: dto.teacherName,
-      currentBatch: `Batch ${dto.batch} (${dto.section})`,
-      leaseExpiresAt,
-    },
-  });
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(240)
+  durationMinutes?: number = 90;
 
-  // 6. Broadcast Push Notification to students in that specific section!
-  this.pushNotificationService.sendToSectionTopic(deptCode, dto.batch, dto.section, {
-    title: `📢 Extra Class Announced: ${dto.courseName}`,
-    body: `Room ${room.roomNumber} booked by CR for ${dto.courseName} with ${dto.teacherName}.`,
-    data: { roomId: room.id, type: 'EXTRA_CLASS' },
-  });
+  @IsOptional()
+  @IsString()
+  startTime?: string; // e.g. "11:30" (defaults to current time if omitted)
 
-  return updated;
+  @IsOptional()
+  @IsString()
+  department?: string; // e.g. "CSE" or "SWE"
+
+  @IsOptional()
+  @IsInt()
+  version?: number = 1; // OCC Version check
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 ```
-- **Automated Communication**: Students don't have to check WhatsApp group chats hoping the CR posts the room number. The moment the CR taps "Confirm Booking", Firebase sends a push notification straight to all phones in that section!
+
+---
+
+### 2. Implementation in `src/modules/rooms/rooms.service.ts` Line by Line:
+
+```typescript
+545: async bookExtraClass(id: string, dto: BookExtraClassDto, userId: string) {
+546:   const room = await this.prisma.room.findFirst({
+547:     where: { OR: [{ id }, { roomNumber: id }] },
+548:     include: { building: true, department: true },
+549:   });
+550:   if (!room) throw new NotFoundException(`Room '${id}' not found`);
+551: 
+552:   // 1. Optimistic Concurrency Control (OCC) Check
+553:   if (room.version !== dto.version) {
+554:     throw new ConflictException(
+555:       `Optimistic Concurrency Lock Conflict: Room status was modified by another user. Current version is ${room.version}. Please refresh and try again.`,
+556:     );
+557:   }
+```
+- Accepts either a room UUID or human room number (`"5030"`).
+- Compares `room.version` with `dto.version`. If another CR claimed the room half a second earlier, the transaction rejects with HTTP 409 Conflict.
+
+```typescript
+562:   const user = await this.prisma.user.findUnique({
+563:     where: { id: userId },
+564:     include: { department: true },
+565:   });
+566: 
+567:   const departmentId = user?.departmentId || room.departmentId;
+568:   const deptCode = (dto.department || user?.department?.code || room.department?.code || 'CSE').trim().toUpperCase();
+```
+- **Department Topic Resolution**:
+  Earlier versions defaulted `deptCode` to `'all'`, which prevented notifications from reaching students because student phones subscribe to department topics like `dept_cse_batch_68_sec_b`. Resolving the CR's authentic department (`user.department?.code`) guarantees that the topic string matches student app subscriptions perfectly.
+
+```typescript
+570:   const now = new Date();
+571:   const duration = dto.durationMinutes || 90;
+572:   const pad = (n: number) => n.toString().padStart(2, '0');
+573: 
+574:   // Derive start and end times
+575:   const startTime = dto.startTime?.trim() || `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+576:   const [startH, startM] = startTime.split(':').map((x) => parseInt(x, 10));
+577:   const startTotalMinutes = (isNaN(startH) ? now.getHours() : startH) * 60 + (isNaN(startM) ? now.getMinutes() : startM);
+578:   const endTotalMinutes = startTotalMinutes + duration;
+579:   const endH = Math.floor(endTotalMinutes / 60) % 24;
+580:   const endM = endTotalMinutes % 60;
+581:   const endTime = `${pad(endH)}:${pad(endM)}`;
+```
+- **Timing Mathematics**:
+  Converts hours and minutes to total elapsed day minutes, adds `durationMinutes`, and converts back with modulo 24. A class starting at `11:30` with `duration = 90` cleanly derives `endTime = "13:00"`.
+
+```typescript
+584:   const dayNames: DayOfWeek[] = [
+585:     DayOfWeek.SUN, DayOfWeek.MON, DayOfWeek.TUE, DayOfWeek.WED, DayOfWeek.THU, DayOfWeek.FRI, DayOfWeek.SAT,
+586:   ];
+587:   const currentDayOfWeek = dayNames[now.getDay()];
+```
+- Matches JavaScript's `Date.getDay()` (`0 = SUN`, `1 = MON`, ..., `6 = SAT`) directly to PostgreSQL's `DayOfWeek` enum.
+
+---
+
+### 3. The 3-Step Atomic Database Transaction:
+
+```typescript
+602:   const result = await this.prisma.$transaction(async (tx) => {
+603:     // Step A: Mark physical room as RUNNING_CLASS and increment OCC version
+604:     const updatedRoom = await tx.room.update({
+605:       where: { id: realId },
+606:       data: {
+607:         currentStatus: RoomStatus.RUNNING_CLASS,
+608:         version: { increment: 1 },
+609:         leaseExpiresAt,
+610:         currentCourse: dto.courseName,
+611:         currentTeacher: dto.teacherInitials || null,
+612:         currentBatch: cohortDisplay,
+613:       },
+614:       include: { building: true, department: true },
+615:     });
+616: 
+617:     // Step B: Write permanent audit record to room_logs
+618:     const auditLog = await tx.roomLog.create({
+619:       data: {
+620:         roomId: realId,
+621:         changedByUserId: userId,
+622:         previousStatus: room.currentStatus,
+623:         newStatus: RoomStatus.RUNNING_CLASS,
+624:         note: dto.note || `Extra class booked by CR for ${cohortDisplay}: ${dto.courseName} (${startTime} - ${endTime})`,
+625:       },
+626:       include: {
+627:         changedByUser: { select: { fullName: true, email: true, role: true } },
+628:       },
+629:     });
+630: 
+631:     // Step C: Create a live ScheduleSlot in PostgreSQL!
+632:     let scheduleSlot = null;
+633:     if (departmentId) {
+634:       scheduleSlot = await tx.scheduleSlot.create({
+635:         data: {
+636:           departmentId,
+637:           roomId: realId,
+638:           batch: dto.batch.trim(),
+639:           section: dto.section.trim(),
+640:           courseCode: courseCode.toUpperCase(),
+641:           courseName: dto.courseName.trim(),
+642:           facultyInitials: dto.teacherInitials?.trim() || 'Assigned',
+643:           dayOfWeek: currentDayOfWeek,
+644:           startTime,
+645:           endTime,
+646:           isActive: true,
+647:         },
+648:         include: {
+649:           room: { select: { id: true, roomNumber: true, floor: true, capacity: true } },
+650:           department: { select: { id: true, code: true, name: true } },
+651:         },
+652:       });
+653:     }
+654: 
+655:     return { room: updatedRoom, auditLog, scheduleSlot };
+656:   });
+```
+
+#### Why is Step C the Architectural Game-Changer?
+Previously, backends only set `Room.currentStatus = RUNNING_CLASS`.
+However, students do not read room logs to discover when their classes start—students check the **Today's Schedule** tab!
+Because the mobile app queries `ScheduleSlot` filtered by the current weekday, creating a real `ScheduleSlot` in Prisma inside the transaction means:
+1. The student's app receives an FCM push notification.
+2. The student opens the app.
+3. `ScheduleProvider.loadSchedules()` fetches the updated routine.
+4. The extra class immediately appears in the **Today** tab as:
+   - `RUNNING` (green badge) if the current clock time is within `startTime` and `endTime`.
+   - `UP NEXT` (amber badge) if the class is scheduled for later today.
+5. The CR and students both see the exact room, start time, end time, and teacher without manual refresh!
+
+---
+
+### 4. Multi-Channel FCM Push Notification Dispatch:
+
+```typescript
+667:   // Broadcast FCM Push Notification to all students of this section
+668:   const pushTitle = `⚡ Extra Class Booked: ${dto.courseName}`;
+669:   const pushBody = `Room ${room.roomNumber} (${room.building?.name || 'Campus'}) booked for ${cohortDisplay} from ${startTime} to ${endTime}. Teacher: ${dto.teacherInitials || 'Assigned Faculty'}.`;
+670: 
+671:   this.pushNotificationService.sendToSectionTopic(deptCode, dto.batch, dto.section, {
+672:     title: pushTitle,
+673:     body: pushBody,
+674:     data: {
+675:       roomId: room.id,
+676:       courseName: dto.courseName,
+677:       teacher: dto.teacherInitials || '',
+678:       batch: dto.batch,
+679:       section: dto.section,
+680:       startTime,
+681:       endTime,
+682:       type: 'EXTRA_CLASS_BOOKED',
+683:     },
+684:   }).catch((err) => {
+685:     this.logger.warn(`Failed to broadcast extra class push: ${err.message}`);
+686:   });
+687: 
+688:   // Also notify faculty member if initials provided
+689:   if (dto.teacherInitials) {
+690:     this.pushNotificationService.sendToFacultyTopic(dto.teacherInitials, {
+691:       title: `Room ${room.roomNumber} Reserved for Your Class`,
+692:       body: `${cohortDisplay} scheduled an extra class in Room ${room.roomNumber} for ${dto.courseName} (${startTime} - ${endTime}).`,
+693:       data: { roomId: room.id, type: 'FACULTY_CLASS_ALERT' },
+694:     }).catch(() => {});
+695:   }
+```
+- **Error Resilience Pattern**: Notice the `.catch((err) => this.logger.warn(...))`.
+  If Google's FCM API experiences a temporary network blip, we log a warning but **do not crash or rollback the successful database booking**. The room remains booked, and the schedule slot remains recorded!
 
 ---
 

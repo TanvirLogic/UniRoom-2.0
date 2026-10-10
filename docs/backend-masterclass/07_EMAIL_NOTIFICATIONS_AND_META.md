@@ -127,6 +127,17 @@ async sendToCrTopic(department: string, notification: NotificationPayload) {
 - When a room is freed, an alert is sent to `dept_swe_crs`. All CRs in the department receive the notification:
   *"Room 5030 is Now Free! 🟢 Tap to claim for your batch."*
 
+#### Faculty Direct Broadcast: `sendToFacultyTopic()`
+```typescript
+async sendToFacultyTopic(facultyInitials: string, notification: NotificationPayload) {
+  const rawTopic = `faculty_${facultyInitials.toLowerCase()}`;
+  const topic = this.sanitizeTopic(rawTopic);
+  return this.sendToTopic(topic, notification);
+}
+```
+- When a CR schedules an extra class or reserves a lab with teacher "DNS", an alert is dispatched directly to `faculty_dns`. The teacher's phone receives:
+  *"Room 5030 Reserved for Your Class 🔔 Batch 68 Sec B scheduled SWE-321."*
+
 ### 3. Android High-Priority Heads-Up Alerts:
 ```typescript
 android: {
@@ -140,6 +151,16 @@ android: {
 }
 ```
 - Ensures the phone wakes up from sleep and shows a prominent heads-up banner with sound and vibration even if the app is in the background or closed!
+
+### 4. Asynchronous Error Isolation Pattern:
+```typescript
+this.pushNotificationService.sendToSectionTopic(deptCode, batch, section, payload)
+  .catch((err) => {
+    this.logger.warn(`Failed to broadcast push: ${err.message}`);
+  });
+```
+- **Why this is critical for reliability**: Network requests to third-party services (like Firebase or Apple APNs) can fail if there is an internet drop.
+- By attaching `.catch(...)`, we isolate the failure: the database transaction has already succeeded, the room is safely booked, and the API responds with `200 OK` rather than crashing and rolling back the user's booking!
 
 ---
 
@@ -194,14 +215,11 @@ async getRegistrationOptions() {
 
 ---
 
-## 4. Summary: How to Become a Professional Backend Developer
+## 4. Next Chapter: The Virtual Classroom Hub
 
-You have now studied every single file, line, and concept powering UniRoom-Live 2.0:
-1. **Architecture**: Modular design, Dependency Injection, request lifecycles.
-2. **Database & ORM**: PostgreSQL relations, cascading deletes, compound unique constraints, B-Tree indexes, and Prisma.
-3. **Security**: Passwords salted with Bcrypt, cryptographic CSPRNG 6-digit PINs, dual JWT token rotation, RBAC role guards, and multi-tenant isolation.
-4. **Concurrency**: The double-booking dilemma and Optimistic Concurrency Control (OCC) using version numbers and atomic transactions.
-5. **Real-Time Timetables**: Mathematical interval collision formulas, routine parsing, temporary overrides, and live class detection.
-6. **Communications**: SMTPS TLS emails and Firebase Cloud Messaging topic broadcasts.
+You have now mastered communications and metadata feeds.
+Next, let's explore **Chapter 8**: how UniRoom-Live enables teachers and CRs to publish classroom notices and lecture materials, with intelligent cross-cohort fan-out push broadcasting!
 
-Study these patterns, practice writing your own controllers and services, and you have the complete toolkit of an enterprise backend engineer!
+---
+
+*Continue to [Chapter 8: Virtual Classroom Hub & Dynamic Cross-Cohort Fan-Out](./08_CLASSROOM_HUB_AND_ACADEMIC_FEEDS.md).*

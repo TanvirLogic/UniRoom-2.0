@@ -17,6 +17,7 @@ This documentation was built to explain every single file, line of code, archite
 | [**Chapter 5**](./05_ROOMS_AND_OCC_BOOKING_ENGINE.md) | **Rooms & Concurrency Control (OCC)** | The Double-Booking Race Condition, Pessimistic vs Optimistic Locking, The `version` Field, Atomic `$transaction`, Query Aggregation with `GROUP BY`, CR Extra Class Bookings |
 | [**Chapter 6**](./06_SCHEDULES_ROUTINES_AND_OVERRIDES.md) | **Schedules, Routines & Emergency Overrides** | Interval Collision Mathematics (`start1 < end2 && end1 > start2`), Routine Ingestion, Joint/Combined Lectures, Daily Overrides (`cancelTodaySlot`, `rescheduleTodaySlot`, `undoTodayOverride`) |
 | [**Chapter 7**](./07_EMAIL_NOTIFICATIONS_AND_META.md) | **Email, Push Notifications & Metadata** | SMTP TLS Delivery (`nodemailer`), Local Dev Fallback, Firebase Cloud Messaging (FCM Topics), Android High-Priority Heads-Up Alerts, Cascading Dropdown Feeds |
+| [**Chapter 8**](./08_CLASSROOM_HUB_AND_ACADEMIC_FEEDS.md) | **Virtual Classroom Hub & Cross-Cohort Fan-Out** | Virtual Classroom Space, Notice Boards, Lecture Note Archives, Dynamic Cross-Cohort Fan-Out Broadcast Algorithm, Role-Based Publishing Rules |
 
 ---
 
@@ -28,3 +29,4 @@ This documentation was built to explain every single file, line of code, archite
 - [Read Chapter 5: Rooms & Concurrency Control](./05_ROOMS_AND_OCC_BOOKING_ENGINE.md)
 - [Read Chapter 6: Schedules & Overrides](./06_SCHEDULES_ROUTINES_AND_OVERRIDES.md)
 - [Read Chapter 7: Email, FCM & Metadata](./07_EMAIL_NOTIFICATIONS_AND_META.md)
+- [Read Chapter 8: Virtual Classroom Hub & Dynamic Fan-Out](./08_CLASSROOM_HUB_AND_ACADEMIC_FEEDS.md)

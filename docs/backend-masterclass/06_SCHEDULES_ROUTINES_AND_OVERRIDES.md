@@ -247,4 +247,71 @@ Calling `DELETE /api/v1/schedules/slots/:slotId/override`:
 
 ---
 
+## 7. Real-Time Resolution: How "Today's Tab" & Extra Classes Work End-to-End
+
+A common question from junior backend engineers is:
+**"How does an extra class booked by a CR on a Saturday or off-day appear in the student's Today tab with running and upcoming timers?"**
+
+Here is the complete data flow:
+
+```
+[ CR Action Screen ]
+        │
+        ▼ 1. POST /api/v1/rooms/:id/book-extra-class
+[ RoomsService.bookExtraClass ]
+        │
+        ├─► 2. Sets Room.currentStatus = RUNNING_CLASS
+        ├─► 3. Creates live ScheduleSlot in PostgreSQL (dayOfWeek = TODAY)
+        └─► 4. Dispatches FCM Push Notification to dept_cse_batch_68_sec_b
+                 │
+                 ▼ 5. Background push wakes student devices
+        [ Flutter Mobile Client ]
+                 │
+                 ▼ 6. Calls GET /api/v1/schedules/slots?batch=68&section=B
+        [ SchedulesService.getScheduleSlots ]
+                 │
+                 ▼ 7. Returns all weekly slots + newly created extra slot
+        [ ScheduleProvider.todaySlots ]
+                 │
+                 ▼ 8. Filters: slot.dayOfWeek === todayDayOfWeek
+        [ TodayScheduleScreen ]
+                 │
+                 ├─► If 11:25 <= now <= 12:45 ──► "Happening Right Now" (Green Hero Card)
+                 ├─► If now < 11:25           ──► "Up Next Today" (Amber Badge)
+                 └─► If now > 12:45           ──► "Completed" (Archive Row)
+```
+
+### 1. The Day-Matching Query in `schedules.service.ts`:
+```typescript
+const where: Prisma.ScheduleSlotWhereInput = {
+  departmentId,
+  batch,
+  section,
+  isActive: true,
+};
+
+const slots = await this.prisma.scheduleSlot.findMany({
+  where,
+  include: {
+    room: { select: { roomNumber: true, floor: true, building: true } },
+    overrides: {
+      where: {
+        overrideDate: { gte: todayStart, lt: todayEnd },
+      },
+    },
+  },
+  orderBy: [{ startTime: 'asc' }],
+});
+```
+
+### 2. Client-Side Real-Time Clock State:
+On the mobile app, `ScheduleProvider` runs a 30-second periodic timer that recalculates each slot's timing state:
+- **`SlotTimingState.runningNow`**: Renders the prominent sky-gradient hero card with live time remaining countdown (`e.g. 42 minutes left`).
+- **`SlotTimingState.upcomingSoon`**: Shows the classroom room number and teacher so students can walk to the right building before the bell rings.
+- **`SlotTimingState.completed`**: Dims the card so students focus on their next class.
+
+If a day is an off-day (no routine slots in the master routine), the schedule is initially empty. The moment the CR books an extra class, `tx.scheduleSlot.create` inserts the slot for today's weekday. The student's app instantly switches from *"No Classes Scheduled Today"* to displaying the active extra class timetable!
+
+---
+
 *Continue to Chapter 7 for Emailing, Firebase Push Notifications, and Metadata Management.*
