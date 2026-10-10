@@ -712,7 +712,7 @@ export class SchedulesService {
       }
 
       return { override, room: updatedRoom };
-    });
+    }, { maxWait: 15000, timeout: 25000 });
 
     // 3. Broadcast FCM Push Notifications
     const deptCode = slot.department?.code || 'all';
@@ -860,7 +860,7 @@ export class SchedulesService {
       }
 
       return { override };
-    });
+    }, { maxWait: 15000, timeout: 25000 });
 
     // 3. Broadcast FCM Push Notifications to section students
     const deptCode = slot.department?.code || 'all';

@@ -510,7 +510,7 @@ export class RoomsService {
         room: updatedRoom,
         auditLog,
       };
-    });
+    }, { maxWait: 15000, timeout: 25000 });
 
     // Broadcast FCM alert to department CRs when a room is made free
     if (dto.status === RoomStatus.AVAILABLE && (result.room.department?.code || result.room.departmentId)) {
@@ -662,7 +662,7 @@ export class RoomsService {
       }
 
       return { room: updatedRoom, auditLog, scheduleSlot };
-    });
+    }, { maxWait: 15000, timeout: 25000 });
 
     // Broadcast FCM Push Notification to all students of this section
     const pushTitle = `⚡ Extra Class Booked: ${dto.courseName}`;
