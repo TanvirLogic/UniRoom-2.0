@@ -215,6 +215,68 @@ async getRegistrationOptions() {
 
 ---
 
+### Multi-Tenant University & Batch Administration:
+In `src/modules/universities/universities.service.ts` & `src/modules/meta/meta.service.ts`:
+
+#### 1. Managing Universities: `createUniversity()`
+```typescript
+79: async createUniversity(dto: CreateUniversityDto) {
+80:   const normalizedCode = dto.code.trim().toUpperCase();
+81:   const existing = await this.prisma.university.findUnique({
+82:     where: { code: normalizedCode },
+83:   });
+84:   if (existing) throw new ConflictException(`University '${normalizedCode}' already exists`);
+85: 
+86:   return this.prisma.university.create({
+87:     data: {
+88:       name: dto.name.trim(),
+89:       code: normalizedCode,
+90:       domain: dto.domain?.trim().toLowerCase(),
+91:       logoUrl: dto.logoUrl?.trim(),
+92:       operatingDays: dto.operatingDays,
+93:       isActive: dto.isActive ?? true,
+94:     },
+95:   });
+96: }
+```
+- Restricts duplicate institution codes (`UU`, `DU`, `NSU`).
+- Stores `operatingDays` (e.g. `[MON, TUE, WED, THU]`) so routines for weekend institutions adapt automatically.
+
+#### 2. Managing Departments: `createDepartment()`
+```typescript
+180: async createDepartment(dto: CreateDepartmentDto) {
+181:   const normalizedCode = dto.code.trim().toUpperCase();
+182:   const university = await this.prisma.university.findUnique({ where: { id: dto.universityId } });
+183:   if (!university) throw new NotFoundException('University not found');
+184: 
+185:   return this.prisma.department.create({
+186:     data: {
+187:       universityId: dto.universityId,
+188:       name: dto.name.trim(),
+189:       code: normalizedCode,
+190:     },
+191:   });
+192: }
+```
+- Enforces composite uniqueness: `@@unique([universityId, code])`. Two universities can both have a `"CSE"` department, but one university cannot have two conflicting departments with the same code!
+
+#### 3. Managing Dynamic Cohorts: `MetaService.createBatch()`
+```typescript
+async createBatch(dto: CreateBatchDto) {
+  return this.prisma.academicBatch.create({
+    data: {
+      departmentId: dto.departmentId,
+      name: dto.name.trim(),
+      sections: dto.sections.map((s) => s.trim().toUpperCase()),
+      isActive: true,
+    },
+  });
+}
+```
+- Populates allowed sections (`["A", "B", "C", "D"]`) so students selecting their section during registration are prevented from entering non-existent sections.
+
+---
+
 ## 4. Next Chapter: The Virtual Classroom Hub
 
 You have now mastered communications and metadata feeds.

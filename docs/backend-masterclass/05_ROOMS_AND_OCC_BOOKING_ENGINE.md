@@ -386,4 +386,139 @@ Because the mobile app queries `ScheduleSlot` filtered by the current weekday, c
 
 ---
 
+## 5. The 1-Tap Free Room Finder Engine: `findFreeRooms()` Line by Line
+
+When students or CRs tap **"Search Free Rooms"** on their mobile app, how does the backend identify which physical classrooms across 10 buildings are empty right now?
+
+Let's inspect `findFreeRooms()` in `src/modules/rooms/rooms.service.ts`:
+
+### 1. The DTO: `FindFreeRoomDto`
+```typescript
+export class FindFreeRoomDto {
+  @IsOptional()
+  @IsString()
+  date?: string; // YYYY-MM-DD (defaults to today)
+
+  @IsOptional()
+  @IsString()
+  startTime?: string; // HH:mm (defaults to now)
+
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(360)
+  durationMinutes?: number = 60;
+
+  @IsOptional()
+  @IsString()
+  buildingId?: string;
+
+  @IsOptional()
+  @IsInt()
+  floor?: number;
+
+  @IsOptional()
+  @IsInt()
+  minCapacity?: number;
+
+  @IsOptional()
+  @IsString()
+  departmentId?: string;
+}
+```
+
+---
+
+### 2. Time Window Normalization:
+```typescript
+724: const targetDate = dto.date ? new Date(`${dto.date}T00:00:00.000Z`) : new Date();
+725: const dayOfWeekMap: Record<number, DayOfWeek> = {
+726:   0: DayOfWeek.SUN, 1: DayOfWeek.MON, 2: DayOfWeek.TUE, 3: DayOfWeek.WED,
+727:   4: DayOfWeek.THU, 5: DayOfWeek.FRI, 6: DayOfWeek.SAT,
+728: };
+729: const targetDayOfWeek = dayOfWeekMap[targetDate.getDay()];
+730: 
+731: const now = new Date();
+732: const reqStart = dto.startTime || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+733: const durationMinutes = dto.durationMinutes || 60;
+734: const reqEnd = this.addMinutesToTime(reqStart, durationMinutes);
+```
+- Converts the requested time into a normalized continuous interval `[reqStart, reqEnd]`.
+- Defaults to the current clock time and an open window of `60 minutes`.
+
+---
+
+### 3. Deep Pre-Filtering with PostgreSQL:
+```typescript
+760: const roomWhere: Prisma.RoomWhereInput = {
+761:   currentStatus: RoomStatus.AVAILABLE,
+762: };
+763: if (targetDepartmentId) roomWhere.department = { OR: [{ id: targetDepartmentId }, { code: { equals: targetDepartmentId, mode: 'insensitive' } }] };
+764: if (dto.buildingId) roomWhere.buildingId = dto.buildingId;
+765: if (dto.floor !== undefined) roomWhere.floor = dto.floor;
+766: if (dto.minCapacity) roomWhere.capacity = { gte: dto.minCapacity };
+```
+- Only queries physical rooms with status `AVAILABLE` that meet the student's capacity and building filters.
+
+---
+
+### 4. Schedule Slot Intersection & The Cancellation Override Rule:
+```typescript
+825: for (const room of candidateRooms) {
+826:   // 1. Check active reservation leases
+827:   if (room.currentStatus !== RoomStatus.AVAILABLE || (room.leaseExpiresAt && room.leaseExpiresAt > now)) {
+828:     continue; // Held by another CR or running class!
+829:   }
+830: 
+831:   let isOccupied = false;
+832:   let nextClassAfterWindow: (typeof room.scheduleSlots)[0] | null = null;
+833: 
+834:   for (const slot of room.scheduleSlots) {
+835:     // Rule A: Check if slot was cancelled today!
+836:     const isCancelled = slot.overrides.some((o) => o.action === OverrideAction.CANCELLED);
+837:     if (isCancelled) {
+838:       continue; // The class was cancelled for today! Room is freed for this window!
+839:     }
+840: 
+841:     // Rule B: Mathematical interval collision: slot.startTime < reqEnd && slot.endTime > reqStart
+842:     const hasOverlap = slot.startTime < reqEnd && slot.endTime > reqStart;
+843:     if (hasOverlap) {
+844:       isOccupied = true;
+845:       break;
+846:     }
+847: 
+848:     // Rule C: Track the next upcoming class
+849:     if (slot.startTime >= reqStart) {
+850:       if (!nextClassAfterWindow || slot.startTime < nextClassAfterWindow.startTime) {
+851:         nextClassAfterWindow = slot;
+852:       }
+853:     }
+854:   }
+855:   if (isOccupied) continue;
+```
+- **The Intelligent Override Check (Lines 836-839)**:
+  If a routine timetable shows that Room 5030 usually has a class at `11:25`, but the teacher cancelled it today, `isCancelled` is `true`. The collision is dismissed! The room is marked free so other students can immediately study or take an extra class inside it!
+
+---
+
+### 5. Lookahead Remaining Minutes Calculation:
+```typescript
+857:   const freeUntil = nextClassAfterWindow ? nextClassAfterWindow.startTime : '20:00';
+858:   const freeMins = this.calculateMinuteDifference(reqStart, freeUntil);
+859: 
+860:   freeRooms.push({
+861:     room,
+862:     freeWindow: { start: reqStart, end: reqEnd, durationMinutes },
+863:     freeUntil,
+864:     freeMinutesRemaining: freeMins,
+865:     nextClass: nextClassAfterWindow ? { ... } : undefined,
+866:   });
+867: }
+```
+- The API responds with:
+  `"Room 5030: Available now. Free for 95m+ until next class at 13:00 (Batch 66 CSE-311)"`.
+- Gives students and CRs complete visibility to plan their study sessions with confidence!
+
+---
+
 *Continue to Chapter 6 for the deep-dive into Master Routine Ingestion, Collision Mathematics, and Emergency Overrides.*

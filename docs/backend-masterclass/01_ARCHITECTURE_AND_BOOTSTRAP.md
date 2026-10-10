@@ -348,4 +348,94 @@ How does NestJS actually talk to PostgreSQL? Through `PrismaService`:
 
 ---
 
+## 7. Health, Diagnostics & Liveness Probes: `src/health/health.controller.ts` Line by Line
+
+In professional production systems (Docker, Kubernetes, AWS, Render, Railway), backends must expose dedicated health endpoints. Orchestrators ping these endpoints every 15 seconds; if the backend hangs or cannot talk to PostgreSQL, the orchestrator automatically restarts the container.
+
+Let's read `src/health/health.controller.ts` line by line:
+
+```typescript
+38: @ApiTags('Health & Diagnostics')
+39: @Controller('health')
+40: export class HealthController {
+41:   constructor(
+42:     private readonly prisma: PrismaService,
+43:     private readonly emailService: EmailService,
+44:     private readonly pushNotificationService: PushNotificationService,
+45:   ) {}
+```
+- Injects `PrismaService`, `EmailService`, and `PushNotificationService` to run live diagnostics across the three pillars of the backend: Database, Emailing, and Push Notifications.
+
+---
+
+### 1. The Liveness Telemetry Route: `GET /api/v1/health`
+```typescript
+46:   @Get()
+47:   @ApiOperation({ summary: 'System, Database, Email & Push Notification Health Status' })
+48:   @ApiResponse({ status: 200, description: 'Operational telemetry across services' })
+49:   async checkHealth() {
+50:     // Ping the Neon PostgreSQL database
+51:     let dbStatus = 'connected';
+52:     try {
+53:       await this.prisma.$queryRaw`SELECT 1`;
+54:     } catch (e: any) {
+55:       dbStatus = `disconnected: ${e.message}`;
+56:     }
+```
+- **`await this.prisma.$queryRaw\`SELECT 1\``**:
+  The lightest possible SQL query in PostgreSQL. It does not scan any tables or load any rows; it simply verifies that the TCP connection and database engine are alive and responding in under 5 milliseconds.
+
+```typescript
+58:     const universityCount = await this.prisma.university.count().catch(() => 0);
+59:     const roomCount = await this.prisma.room.count().catch(() => 0);
+60:     const slotCount = await this.prisma.scheduleSlot.count().catch(() => 0);
+61: 
+62:     const emailStatus = this.emailService.getStatus();
+63:     const pushStatus = this.pushNotificationService.getStatus();
+64: 
+65:     return {
+66:       status: 'ok',
+67:       service: 'UniRoom-Live 2.0 Backend',
+68:       database: {
+69:         status: dbStatus,
+70:         provider: 'PostgreSQL (Neon Serverless)',
+71:         stats: {
+72:           universities: universityCount,
+73:           rooms: roomCount,
+74:           scheduleSlots: slotCount,
+75:         },
+76:       },
+77:       email: emailStatus,
+78:       pushNotifications: pushStatus,
+79:       timestamp: new Date().toISOString(),
+80:     };
+81:   }
+```
+- Returns real-time telemetry stats (number of universities, classrooms, and timetable slots), SMTP status, and Firebase FCM status.
+- If any count query fails, `.catch(() => 0)` ensures the health route still returns a valid payload rather than crashing.
+
+---
+
+### 2. Deep Diagnostics & Live Testing Routes
+```typescript
+83:   @Get('diagnostics')
+84:   @ApiOperation({ summary: 'Run deep live diagnostics on SMTP Mail Server and Firebase Admin SDK' })
+85:   async runDiagnostics() {
+86:     const emailVerify = await this.emailService.verifyConnection();
+87:     const pushStatus = this.pushNotificationService.getStatus();
+88: 
+89:     return {
+90:       service: 'UniRoom-Live 2.0',
+91:       timestamp: new Date().toISOString(),
+92:       email: { ...this.emailService.getStatus(), verification: emailVerify },
+93:       pushNotifications: { ...pushStatus },
+94:     };
+95:   }
+```
+- **`GET /api/v1/health/diagnostics`**: Performs a full SMTP handshake test (`verifyConnection()`) to verify Gmail App Passwords and checks if Firebase credentials are fully loaded into memory.
+- **`POST /api/v1/health/test-email`**: Allows administrators to send a test email to any inbox to verify TLS delivery.
+- **`POST /api/v1/health/test-push`**: Dispatches a test Firebase Cloud Messaging push notification to verify phone device tokens or topic delivery without scheduling a real class.
+
+---
+
 *Continue to Chapter 2 for the complete line-by-line masterclass of the PostgreSQL schema and relational database models.*
